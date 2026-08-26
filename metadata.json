@@ -1,0 +1,6 @@
+{
+  "name": "AzProjects - إدارة المشاريع المعمارية",
+  "description": "منصة شاملة ومتكاملة لإدارة المشاريع المعمارية والهندسية، متابعة التكاليف والمراحل والمخططات، والتكامل مع دفترة وMagicPlan وWhatsApp.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
