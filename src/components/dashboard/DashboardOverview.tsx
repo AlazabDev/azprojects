@@ -14,7 +14,9 @@ import {
   Sparkles, 
   Plus, 
   Compass,
-  FileDown
+  FileDown,
+  Bell,
+  ChevronLeft
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
@@ -28,6 +30,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
     tasks, 
     costs, 
     whatsAppMessages, 
+    notifications,
+    unreadNotificationsCount,
+    criticalNotificationsCount,
     setSelectedProjectId, 
     setNavigationTab,
     syncWithDaftra,
@@ -258,9 +263,57 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
 
         </div>
 
-        {/* Right Section (4 Columns): Smart Integrations & Annual Financial Overview */}
+        {/* Right Section (4 Columns): Deadlines Widget, Smart Integrations & Annual Financial Overview */}
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
           
+          {/* Active Deadlines & Alerts Widget */}
+          <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-amber-500" />
+                <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">تنبيهات المواعيد والمراحل</h3>
+              </div>
+              <button 
+                onClick={() => setNavigationTab('notifications')}
+                className="text-[11px] text-amber-600 hover:text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5"
+              >
+                <span>مركز التنبيهات</span>
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {notifications.slice(0, 3).map((ntf) => (
+                <div
+                  key={ntf.id}
+                  onClick={() => {
+                    if (ntf.projectId) setSelectedProjectId(ntf.projectId);
+                    setNavigationTab('notifications');
+                  }}
+                  className={`p-2.5 rounded-lg border text-right cursor-pointer transition ${
+                    ntf.priority === 'critical' 
+                      ? 'border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/30' 
+                      : 'border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className={`text-xs font-bold truncate ${ntf.priority === 'critical' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                      {ntf.title}
+                    </span>
+                    {ntf.targetDate && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0 font-medium font-mono">
+                        {ntf.targetDate}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                    {ntf.message}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* Smart Integrations Status Card */}
           <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs p-4">
             <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white mb-3">حالة التكاملات الذكية</h3>

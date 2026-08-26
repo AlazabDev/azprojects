@@ -84,6 +84,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
       case 'whatsapp': return 'مركز وسائط واتساب الميداني';
       case 'documents': return 'المستندات والمخططات الهندسية';
       case 'suppliers': return 'دليل الموردين والمقاولين';
+      case 'notifications': return 'نظام التنبيهات والمواعيد الدورية';
       case 'reports':
       case 'reports-ai': return 'المستشار الذكي والتقارير';
       case 'settings': return 'إعدادات النظام والصلاحيات';
@@ -248,28 +249,44 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
                 {notifications.length === 0 ? (
                   <p className="text-center text-xs text-slate-400 py-6">لا توجد إشعارات جديدة</p>
                 ) : (
-                  notifications.map((ntf) => (
+                  notifications.slice(0, 6).map((ntf) => (
                     <div 
                       key={ntf.id}
-                      onClick={() => markNotificationAsRead(ntf.id)}
+                      onClick={() => {
+                        markNotificationAsRead(ntf.id);
+                        setShowNotifications(false);
+                        setNavigationTab('notifications');
+                      }}
                       className={`p-3 text-right transition cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40 ${
-                        !ntf.read ? 'bg-indigo-50/30 dark:bg-indigo-950/20' : ''
+                        !ntf.read ? 'bg-amber-50/30 dark:bg-amber-950/20' : ''
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className={`text-xs font-semibold ${!ntf.read ? 'text-indigo-900 dark:text-indigo-300' : 'text-slate-800 dark:text-slate-200'}`}>
+                        <p className={`text-xs font-semibold ${!ntf.read ? (ntf.priority === 'critical' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white') : 'text-slate-700 dark:text-slate-300'}`}>
                           {ntf.title}
                         </p>
                         <span className="text-[9px] text-slate-400 shrink-0">
                           {new Date(ntf.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed line-clamp-2">
                         {ntf.message}
                       </p>
                     </div>
                   ))
                 )}
+              </div>
+
+              <div className="p-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <button
+                  onClick={() => {
+                    setShowNotifications(false);
+                    setNavigationTab('notifications');
+                  }}
+                  className="w-full py-1.5 text-center text-xs font-semibold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:bg-amber-100/50 dark:hover:bg-amber-950/40 rounded-lg transition"
+                >
+                  عرض جميع التنبيهات والمواعيد ({notifications.length})
+                </button>
               </div>
             </div>
           )}

@@ -15,6 +15,7 @@ import { DaftraSyncHub } from './components/integrations/DaftraSyncHub';
 import { ReportsAndAiAssistant } from './components/reports/ReportsAndAiAssistant';
 import { SuppliersDirectory } from './components/suppliers/SuppliersDirectory';
 import { SystemSettings } from './components/settings/SystemSettings';
+import { NotificationsHub } from './components/notifications/NotificationsHub';
 import { CreateProjectModal } from './components/projects/CreateProjectModal';
 
 const MainAppContent: React.FC = () => {
@@ -26,6 +27,8 @@ const MainAppContent: React.FC = () => {
     switch (navigationTab) {
       case 'dashboard':
         return <DashboardOverview onOpenNewProject={() => setShowCreateModal(true)} />;
+      case 'notifications':
+        return <NotificationsHub />;
       case 'projects':
         return <ProjectList onOpenNewProject={() => setShowCreateModal(true)} />;
       case 'project-detail':

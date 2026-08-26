@@ -43,6 +43,11 @@ export interface Project {
   floorsCount: number;
   contractorName?: string;
   leadArchitect?: string;
+  daftraWorkOrderId?: string;
+  daftraWorkOrderUrl?: string;
+  magicplanId?: string;
+  magicplanThumbnailUrl?: string;
+  assigneeEmail?: string;
 }
 
 export type PhaseStatus = 'pending' | 'in-progress' | 'completed' | 'on-hold' | 'delayed';
@@ -313,12 +318,25 @@ export type NotificationType =
   | 'document' 
   | 'system' 
   | 'whatsapp' 
-  | 'ai';
+  | 'ai'
+  | 'deadline'
+  | 'phase'
+  | 'periodic';
+
+export type AlertCategory = 
+  | 'deadline' 
+  | 'phase_update' 
+  | 'task_alert' 
+  | 'budget_alert' 
+  | 'periodic_brief' 
+  | 'system_sync' 
+  | 'whatsapp_media';
 
 export interface NotificationItem {
   id: string;
   userId: string;
   type: NotificationType;
+  category?: AlertCategory;
   title: string;
   message: string;
   read: boolean;
@@ -326,6 +344,42 @@ export interface NotificationItem {
   actionUrl?: string;
   priority: 'low' | 'normal' | 'high' | 'critical';
   createdAt: string;
+  // Deep-linking & contextual metadata
+  projectId?: string;
+  projectName?: string;
+  phaseId?: string;
+  phaseName?: string;
+  taskId?: string;
+  taskTitle?: string;
+  targetDate?: string;
+  daysRemaining?: number;
+  snoozedUntil?: string;
+  soundAlerted?: boolean;
+}
+
+export interface AlertRule {
+  id: string;
+  name: string;
+  category: AlertCategory;
+  enabled: boolean;
+  frequency: 'immediate' | 'daily' | 'weekly';
+  leadDays: number; // e.g. 7 days before deadline, 3 days, 1 day, 0 days
+  targetAudience: 'all' | 'owner' | 'manager' | 'engineers';
+  soundEnabled: boolean;
+  whatsappNotification: boolean;
+  lastTriggeredAt?: string;
+}
+
+export interface PeriodicAlertSettings {
+  enablePeriodicScanning: boolean;
+  scanIntervalMinutes: number; // e.g. 15 mins, 30 mins, 60 mins
+  dailyBriefingTime: string; // e.g. "08:30"
+  enableDailyBriefing: boolean;
+  enableWeeklySummary: boolean;
+  notifyBeforeDays: number[]; // [7, 3, 1, 0]
+  criticalSoundAlerts: boolean;
+  autoSnoozeDays: number;
+  rules: AlertRule[];
 }
 
 export interface AuditLogItem {
@@ -360,11 +414,16 @@ export interface AppSettings {
   language: 'ar' | 'en';
   currency: string;
   currencySymbol: string;
+  customDomain?: string;
+  productionUrl?: string;
   supabaseUrl: string;
   supabaseAnonKey: string;
   daftraApiKey: string;
   daftraSubdomain: string;
+  daftraWorkOrderUrl?: string;
+  daftraBaseUrl?: string;
   magicplanApiKey: string;
+  magicplanProjectId?: string;
   whatsappWebhookUrl: string;
   autoSyncDaftra: boolean;
   autoClassifyWhatsApp: boolean;

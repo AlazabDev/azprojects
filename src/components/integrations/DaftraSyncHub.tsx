@@ -83,7 +83,19 @@ export const DaftraSyncHub: React.FC = () => {
           </div>
         </div>
 
-        <div className="relative z-10 flex items-center gap-2.5">
+        <div className="relative z-10 flex flex-wrap items-center gap-2.5">
+          {selectedProject?.daftraWorkOrderUrl && (
+            <a
+              href={selectedProject.daftraWorkOrderUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-md transition"
+            >
+              <span>أمر عمل دفترة #{selectedProject.daftraWorkOrderId || '17'}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+
           <button
             onClick={handleSyncAll}
             disabled={isSyncing}

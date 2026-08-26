@@ -15,7 +15,8 @@ import {
   Database, 
   Building2, 
   RotateCcw,
-  ChevronLeft
+  ChevronLeft,
+  Bell
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,7 +33,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
     whatsAppMessages,
     tasks,
     currentUser,
-    activeRole
+    activeRole,
+    unreadNotificationsCount,
+    criticalNotificationsCount
   } = useApp();
 
   const pendingTasksCount = tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
@@ -44,6 +47,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
       label: 'لوحة التحكم المركزية',
       icon: LayoutDashboard,
       badge: null
+    },
+    {
+      id: 'notifications',
+      label: 'التنبيهات والمواعيد',
+      icon: Bell,
+      badge: unreadNotificationsCount > 0 ? String(unreadNotificationsCount) : null,
+      badgeColor: criticalNotificationsCount > 0 ? 'bg-rose-600 text-white animate-pulse' : 'bg-amber-500 text-white'
     },
     {
       id: 'projects',

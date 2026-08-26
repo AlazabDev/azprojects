@@ -10,7 +10,10 @@ import {
   Download, 
   RefreshCw, 
   Info, 
-  CheckCircle2
+  CheckCircle2,
+  Image,
+  ExternalLink,
+  UserCheck
 } from 'lucide-react';
 
 export const MagicPlanViewer: React.FC = () => {
@@ -20,6 +23,7 @@ export const MagicPlanViewer: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDimensions, setShowDimensions] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [viewMode, setViewMode] = useState<'interactive' | 'thumbnail'>('interactive');
 
   const activeFloor = magicPlanDesign.floors[selectedFloorIndex] || magicPlanDesign.floors[0];
   const currentRooms = activeFloor?.rooms || [];
@@ -82,6 +86,32 @@ export const MagicPlanViewer: React.FC = () => {
 
         {/* Sync & Export CTA */}
         <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-slate-100 dark:bg-slate-700 p-1 rounded-xl">
+            <button
+              onClick={() => setViewMode('interactive')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                viewMode === 'interactive'
+                  ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>مخطط تفاعلي 2D</span>
+            </button>
+            <button
+              onClick={() => setViewMode('thumbnail')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                viewMode === 'thumbnail'
+                  ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+              }`}
+            >
+              <Image className="w-3.5 h-3.5" />
+              <span>المعاينة السحابية</span>
+            </button>
+          </div>
+
           <button
             onClick={handleSync}
             disabled={isSyncing}
@@ -172,107 +202,124 @@ export const MagicPlanViewer: React.FC = () => {
 
           </div>
 
-          {/* 2D Interactive Architectural SVG Floor Plan */}
+          {/* 2D Interactive Architectural SVG Floor Plan OR MagicPlan Cloud Thumbnail */}
           <div className="relative z-10 flex-1 flex items-center justify-center py-6 overflow-hidden">
-            <div 
-              style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.2s ease-out' }}
-              className="w-full max-w-[650px] aspect-[4/3] relative select-none"
-            >
-              <svg
-                viewBox="0 0 700 450"
-                className="w-full h-full drop-shadow-2xl"
+            {viewMode === 'thumbnail' ? (
+              <div className="w-full max-w-[650px] flex flex-col items-center justify-center p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-3 animate-in fade-in">
+                <div className="relative w-full max-h-[380px] rounded-lg overflow-hidden border border-slate-700/80 bg-slate-900 flex items-center justify-center">
+                  <img
+                    src={magicPlanDesign.thumbnailUrl}
+                    alt="MagicPlan Cloud Blueprint Thumbnail"
+                    referrerPolicy="no-referrer"
+                    className="max-h-[360px] w-auto object-contain rounded transition-transform hover:scale-105"
+                  />
+                </div>
+                <div className="w-full flex items-center justify-between text-xs text-slate-400 px-1 font-mono">
+                  <span>ID: {magicPlanDesign.designId}</span>
+                  <span className="text-sky-400 font-bold">MagicPlan Live Cloud Asset</span>
+                </div>
+              </div>
+            ) : (
+              <div 
+                style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.2s ease-out' }}
+                className="w-full max-w-[650px] aspect-[4/3] relative select-none"
               >
-                {/* External Property Boundary Wall */}
-                <rect
-                  x="15"
-                  y="15"
-                  width="670"
-                  height="420"
-                  fill="none"
-                  stroke="#38bdf8"
-                  strokeWidth="2"
-                  strokeDasharray="6 4"
-                  opacity="0.3"
-                />
+                <svg
+                  viewBox="0 0 700 450"
+                  className="w-full h-full drop-shadow-2xl"
+                >
+                  {/* External Property Boundary Wall */}
+                  <rect
+                    x="15"
+                    y="15"
+                    width="670"
+                    height="420"
+                    fill="none"
+                    stroke="#38bdf8"
+                    strokeWidth="2"
+                    strokeDasharray="6 4"
+                    opacity="0.3"
+                  />
 
-                {/* Building Main Perimeter Walls */}
-                <rect
-                  x="25"
-                  y="25"
-                  width="650"
-                  height="400"
-                  fill="#0f172a"
-                  stroke="#475569"
-                  strokeWidth="6"
-                  rx="4"
-                />
+                  {/* Building Main Perimeter Walls */}
+                  <rect
+                    x="25"
+                    y="25"
+                    width="650"
+                    height="400"
+                    fill="#0f172a"
+                    stroke="#475569"
+                    strokeWidth="6"
+                    rx="4"
+                  />
 
-                {/* Render Rooms for Current Selected Floor */}
-                {currentRooms.map((room) => {
-                  const isSelected = selectedRoom?.id === room.id;
-                  const { x, y, width, height } = room.coordinates;
+                  {/* Render Rooms for Current Selected Floor */}
+                  {currentRooms.map((room) => {
+                    const isSelected = selectedRoom?.id === room.id;
+                    const { x, y, width, height } = room.coordinates;
 
-                  return (
-                    <g
-                      key={room.id}
-                      onClick={() => setSelectedRoom(room)}
-                      className="cursor-pointer transition-all duration-200"
-                    >
-                      {/* Room Area Rectangle */}
-                      <rect
-                        x={x}
-                        y={y}
-                        width={width}
-                        height={height}
-                        fill={isSelected ? 'rgba(59, 130, 246, 0.45)' : getRoomFill(room.type)}
-                        stroke={isSelected ? '#60a5fa' : getRoomStroke(room.type)}
-                        strokeWidth={isSelected ? '3' : '1.5'}
-                        rx="3"
-                      />
-
-                      {/* Room Label & Area */}
-                      <text
-                        x={x + width / 2}
-                        y={y + height / 2 - 6}
-                        fill="#f8fafc"
-                        fontSize="12"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        className="pointer-events-none drop-shadow-md"
+                    return (
+                      <g
+                        key={room.id}
+                        onClick={() => setSelectedRoom(room)}
+                        className="cursor-pointer transition-all duration-200"
                       >
-                        {room.name}
-                      </text>
+                        {/* Room Area Rectangle */}
+                        <rect
+                          x={x}
+                          y={y}
+                          width={width}
+                          height={height}
+                          fill={isSelected ? 'rgba(59, 130, 246, 0.45)' : getRoomFill(room.type)}
+                          stroke={isSelected ? '#60a5fa' : getRoomStroke(room.type)}
+                          strokeWidth={isSelected ? '3' : '1.5'}
+                          rx="3"
+                        />
 
-                      <text
-                        x={x + width / 2}
-                        y={y + height / 2 + 12}
-                        fill="#38bdf8"
-                        fontSize="11"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        className="pointer-events-none font-mono"
-                      >
-                        {room.areaM2} m²
-                      </text>
-
-                      {/* Dimension Indicators if enabled */}
-                      {showDimensions && (
+                        {/* Room Label & Area */}
                         <text
                           x={x + width / 2}
-                          y={y - 4}
-                          fill="#94a3b8"
-                          fontSize="9"
+                          y={y + height / 2 - 6}
+                          fill="#f8fafc"
+                          fontSize="12"
+                          fontWeight="bold"
                           textAnchor="middle"
-                          className="font-mono"
+                          className="pointer-events-none drop-shadow-md"
                         >
-                          {room.dimensions}
+                          {room.name}
                         </text>
-                      )}
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
+
+                        <text
+                          x={x + width / 2}
+                          y={y + height / 2 + 12}
+                          fill="#38bdf8"
+                          fontSize="11"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                          className="pointer-events-none font-mono"
+                        >
+                          {room.areaM2} m²
+                        </text>
+
+                        {/* Dimension Indicators if enabled */}
+                        {showDimensions && (
+                          <text
+                            x={x + width / 2}
+                            y={y - 4}
+                            fill="#94a3b8"
+                            fontSize="9"
+                            textAnchor="middle"
+                            className="font-mono"
+                          >
+                            {room.dimensions}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            )}
           </div>
 
           {/* Canvas Bottom Legend */}
@@ -347,7 +394,7 @@ export const MagicPlanViewer: React.FC = () => {
           </div>
 
           {/* MagicPlan Cloud Sync Status */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs space-y-2 text-xs">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs space-y-2.5 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-800 dark:text-slate-200">سجل مزامنة MagicPlan Cloud</span>
               <span className="text-emerald-600 font-bold flex items-center gap-1">
@@ -355,12 +402,17 @@ export const MagicPlanViewer: React.FC = () => {
                 <span>متزامن</span>
               </span>
             </div>
-            <p className="text-slate-500 text-[11px]">
-              رقم المخطط: {magicPlanDesign.designId}
-            </p>
-            <p className="text-slate-500 text-[11px]">
-              إجمالي المساحة: {magicPlanDesign.totalAreaM2} م² ({magicPlanDesign.roomsCount} فراغ)
-            </p>
+            <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl space-y-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+              <p className="truncate"><strong>Design ID:</strong> {magicPlanDesign.designId}</p>
+              <p><strong>المساحة الإجمالية:</strong> {magicPlanDesign.totalAreaM2} م² ({magicPlanDesign.roomsCount} فراغ)</p>
+              <p><strong>المحيط الإجمالي:</strong> {magicPlanDesign.wallPerimeterM} م</p>
+              {selectedProject?.assigneeEmail && (
+                <p className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-sans pt-1 border-t border-slate-200 dark:border-slate-700">
+                  <UserCheck className="w-3 h-3 text-sky-500" />
+                  <span>المسؤول: {selectedProject.assigneeEmail}</span>
+                </p>
+              )}
+            </div>
           </div>
 
         </div>

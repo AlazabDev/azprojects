@@ -15,7 +15,13 @@ import {
   Sparkles,
   Layers,
   Building2,
-  RefreshCw
+  RefreshCw,
+  Server,
+  ExternalLink,
+  Copy,
+  CheckCircle2,
+  Lock,
+  ArrowUpRight
 } from 'lucide-react';
 
 export const SystemSettings: React.FC = () => {
@@ -31,9 +37,16 @@ export const SystemSettings: React.FC = () => {
   } = useApp();
 
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [apiKeyDaftra, setApiKeyDaftra] = useState('daftra_live_79a2410f99b1c');
-  const [apiKeyMagicPlan, setApiKeyMagicPlan] = useState('mp_cloud_v2_810984920');
-  const [apiKeyGemini, setApiKeyGemini] = useState('gemini_2.5_flash_configured');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [apiKeyDaftra, setApiKeyDaftra] = useState('daf_live_alazab_co_998124018274aefb');
+  const [apiKeyMagicPlan, setApiKeyMagicPlan] = useState('mp_sec_3faed7e9_6e92_495c_b4a6');
+  const [productionDomain, setProductionDomain] = useState('projects.alazab.com');
+
+  const copyToClipboard = (text: string, fieldId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldId);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const handleSaveIntegrations = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,7 +160,98 @@ export const SystemSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. API Integrations Config */}
+      {/* 3. Production Deployment & Custom Domain */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-blue-200 dark:border-blue-900/60 shadow-xs space-y-4 relative overflow-hidden">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Globe className="w-4 h-4 text-blue-600" />
+            <span>نشر الإنتاج والدومين المخصص (Production Domain: projects.alazab.com)</span>
+          </h2>
+          <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] rounded-full border border-emerald-200 dark:border-emerald-800">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>مهيأ وجاهز للنشر المباشر</span>
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          تم ضبط منظومة AzProjects للعمل ونشر الإنتاج على النطاق الرسمي <strong className="text-blue-600 font-mono">projects.alazab.com</strong> مع دعم كامل لشهادات SSL وربط نقاط الـ API والـ Webhooks.
+        </p>
+
+        {/* Live Domain URL & DNS Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div className="p-4 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                <span>رابط الإنتاج الرسمي (Live URL)</span>
+              </span>
+              <a
+                href="https://projects.alazab.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
+              >
+                <span>زيارة النطاق</span>
+                <ArrowUpRight className="w-3 h-3" />
+              </a>
+            </div>
+            <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-blue-200 dark:border-blue-900 font-mono text-slate-800 dark:text-slate-200">
+              <span className="font-bold text-xs">https://projects.alazab.com</span>
+              <button
+                onClick={() => copyToClipboard('https://projects.alazab.com', 'prodUrl')}
+                className="p-1 text-slate-500 hover:text-blue-600 transition"
+                title="نسخ الرابط"
+              >
+                {copiedField === 'prodUrl' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 dark:text-slate-200">سجل توجيه النطاق (DNS CNAME Record)</span>
+              <span className="text-[10px] text-slate-400">DNS Config</span>
+            </div>
+            <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-[11px]">
+              <span className="text-slate-700 dark:text-slate-300">CNAME: projects ➜ ghs.googlehosted.com</span>
+              <button
+                onClick={() => copyToClipboard('ghs.googlehosted.com', 'cname')}
+                className="p-1 text-slate-500 hover:text-blue-600 transition"
+                title="نسخ قيمة CNAME"
+              >
+                {copiedField === 'cname' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* System & Handover Status Checklist */}
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+          <span className="font-bold text-xs text-slate-900 dark:text-white block">
+            حالة ترحيل الباك إند وتسليم مشروع أرابيسك (Arabesque Handover & Migration):
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>مخطط Arabesque السحابي (MagicPlan ID: 3faed7e9)</span>
+            </div>
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>أمر عمل دفترة رقم 17 متزامن ومطابق للقيود</span>
+            </div>
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>محرك فحص المواقع والتكاليف بالذكاء الاصطناعي جاهز</span>
+            </div>
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>نقطة استقبال وتصنيف مستندات الواتساب مهيأة</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. API Integrations Config */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <Key className="w-4 h-4 text-blue-600" />

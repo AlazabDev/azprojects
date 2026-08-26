@@ -17,8 +17,16 @@ import {
   AppSettings, 
   UserRole,
   TaskStatus,
-  DaftraSyncRecord
+  DaftraSyncRecord,
+  PeriodicAlertSettings,
+  AlertRule
 } from '../types';
+
+import {
+  defaultPeriodicAlertSettings,
+  scanDeadlinesAndPhaseUpdates,
+  playAlertChime
+} from '../utils/alertEngine';
 
 import {
   initialCurrentUser,
@@ -48,6 +56,9 @@ interface AppContextType {
   // Settings
   settings: AppSettings;
   updateSettings: (settings: Partial<AppSettings>) => void;
+  alertSettings: PeriodicAlertSettings;
+  updateAlertSettings: (settings: Partial<PeriodicAlertSettings>) => void;
+  updateAlertRule: (ruleId: string, updates: Partial<AlertRule>) => void;
 
   // Projects
   projects: Project[];
@@ -116,12 +127,18 @@ interface AppContextType {
   addTeamMember: (member: Omit<TeamMember, 'id' | 'joinedAt'>) => void;
   removeTeamMember: (id: string) => void;
 
-  // Notifications & Audit
+  // Notifications & Periodic Alerts
   notifications: NotificationItem[];
   unreadNotificationsCount: number;
+  criticalNotificationsCount: number;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   addNotification: (ntf: Omit<NotificationItem, 'id' | 'createdAt'>) => void;
+  deleteNotification: (id: string) => void;
+  clearAllNotifications: () => void;
+  snoozeNotification: (id: string, days: number) => void;
+  runDeadlineScan: (manual?: boolean) => { newAlertsCount: number; criticalCount: number };
+  triggerPhaseUpdateNotification: (phaseId: string, oldProgress: number, newProgress: number) => void;
 
   auditLogs: AuditLogItem[];
   addAuditLog: (action: string, entityType: AuditLogItem['entityType'], entityId: string, description: string, projectId?: string) => void;
@@ -160,6 +177,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => getStoredItem('currentUser', initialCurrentUser));
   const [activeRole, setActiveRoleState] = useState<UserRole>(() => getStoredItem('activeRole', 'owner'));
   const [settings, setSettings] = useState<AppSettings>(() => getStoredItem('settings', initialSettings));
+  const [alertSettings, setAlertSettings] = useState<PeriodicAlertSettings>(() => getStoredItem('alertSettings', defaultPeriodicAlertSettings));
   
   const [projects, setProjects] = useState<Project[]>(() => getStoredItem('projects', initialProjects));
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => getStoredItem('selectedProjectId', initialProjects[0]?.id || 'PRJ-001'));
@@ -184,6 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => setStoredItem('currentUser', currentUser), [currentUser]);
   useEffect(() => setStoredItem('activeRole', activeRole), [activeRole]);
   useEffect(() => setStoredItem('settings', settings), [settings]);
+  useEffect(() => setStoredItem('alertSettings', alertSettings), [alertSettings]);
   useEffect(() => setStoredItem('projects', projects), [projects]);
   useEffect(() => setStoredItem('selectedProjectId', selectedProjectId), [selectedProjectId]);
   useEffect(() => setStoredItem('phases', phases), [phases]);
@@ -208,6 +227,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const projectPayments = payments.filter(p => p.projectId === selectedProjectId);
   const projectTeamMembers = teamMembers.filter(m => m.projectId === selectedProjectId);
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+  const criticalNotificationsCount = notifications.filter(n => n.priority === 'critical' && !n.read).length;
 
   const triggerConfetti = () => {
     try {
@@ -241,6 +261,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSettings(prev => ({ ...prev, ...settingUpdates }));
   };
 
+  const updateAlertSettings = (newAlertSettings: Partial<PeriodicAlertSettings>) => {
+    setAlertSettings(prev => ({ ...prev, ...newAlertSettings }));
+  };
+
+  const updateAlertRule = (ruleId: string, updates: Partial<AlertRule>) => {
+    setAlertSettings(prev => ({
+      ...prev,
+      rules: prev.rules.map(r => r.id === ruleId ? { ...r, ...updates } : r)
+    }));
+  };
+
   const addAuditLog = (
     action: string, 
     entityType: AuditLogItem['entityType'], 
@@ -268,10 +299,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addNotification = (ntf: Omit<NotificationItem, 'id' | 'createdAt'>) => {
     const newNotification: NotificationItem = {
       ...ntf,
-      id: 'NTF-' + Date.now(),
+      id: 'NTF-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotification, ...prev]);
+    if (alertSettings.criticalSoundAlerts && (ntf.priority === 'critical' || ntf.priority === 'high')) {
+      playAlertChime(ntf.priority);
+    }
   };
 
   const markNotificationAsRead = (id: string) => {
@@ -280,6 +314,112 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const markAllNotificationsAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true, readAt: new Date().toISOString() })));
+  };
+
+  const deleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  const snoozeNotification = (id: string, days: number) => {
+    const target = new Date();
+    target.setDate(target.getDate() + days);
+    setNotifications(prev => prev.map(n => {
+      if (n.id === id) {
+        return {
+          ...n,
+          read: true,
+          snoozedUntil: target.toISOString()
+        };
+      }
+      return n;
+    }));
+    addAuditLog('تأجيل تنبيه', 'project', id, `تم تأجيل التنبيه لمدة ${days} أيام`);
+  };
+
+  const runDeadlineScan = (manual: boolean = false): { newAlertsCount: number; criticalCount: number } => {
+    if (!alertSettings.enablePeriodicScanning && !manual) {
+      return { newAlertsCount: 0, criticalCount: 0 };
+    }
+
+    const { newNotifications, criticalCount } = scanDeadlinesAndPhaseUpdates(
+      projects,
+      phases,
+      tasks,
+      costs,
+      alertSettings,
+      notifications,
+      currentUser.id
+    );
+
+    if (newNotifications.length > 0) {
+      setNotifications(prev => [...newNotifications, ...prev]);
+      if (alertSettings.criticalSoundAlerts) {
+        playAlertChime(criticalCount > 0 ? 'critical' : 'high');
+      }
+      addAuditLog('مسح المواعيد والمراحل', 'project', 'SCAN-' + Date.now(), `تم إنشاء ${newNotifications.length} تنبيهات موعد ومراحل جديدة.`);
+    }
+
+    return { newAlertsCount: newNotifications.length, criticalCount };
+  };
+
+  // Periodic scan timer
+  useEffect(() => {
+    // Initial scan after 2 seconds
+    const initialTimer = setTimeout(() => {
+      runDeadlineScan(false);
+    }, 2000);
+
+    // Periodic scanner interval based on settings
+    const intervalMs = Math.max(1, alertSettings.scanIntervalMinutes || 15) * 60 * 1000;
+    const intervalTimer = setInterval(() => {
+      runDeadlineScan(false);
+    }, intervalMs);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(intervalTimer);
+    };
+  }, [alertSettings.enablePeriodicScanning, alertSettings.scanIntervalMinutes]);
+
+  const triggerPhaseUpdateNotification = (phaseId: string, oldProgress: number, newProgress: number) => {
+    const phase = phases.find(p => p.id === phaseId);
+    if (!phase) return;
+    const prj = projects.find(p => p.id === phase.projectId);
+
+    if (newProgress === 100 && oldProgress < 100) {
+      triggerConfetti();
+      addNotification({
+        userId: currentUser.id,
+        type: 'phase',
+        category: 'phase_update',
+        title: `إنجاز مرحلة بنجاح: ${phase.name}`,
+        message: `تم إنهاء واكتمال مرحلة "${phase.name}" بنسبة 100% في مشروع "${prj?.name || ''}". تم إتاحة الانتقال للمرحلة التالية.`,
+        priority: 'high',
+        read: false,
+        projectId: phase.projectId,
+        projectName: prj?.name,
+        phaseId: phase.id,
+        phaseName: phase.name
+      });
+    } else if (newProgress > oldProgress && (newProgress === 25 || newProgress === 50 || newProgress === 75)) {
+      addNotification({
+        userId: currentUser.id,
+        type: 'phase',
+        category: 'phase_update',
+        title: `تحديث تقدم مرحلة (${newProgress}%): ${phase.name}`,
+        message: `وصلت نسبة إنجاز مرحلة "${phase.name}" إلى ${newProgress}% بمشروع "${prj?.name || ''}".`,
+        priority: 'normal',
+        read: false,
+        projectId: phase.projectId,
+        projectName: prj?.name,
+        phaseId: phase.id,
+        phaseName: phase.name
+      });
+    }
   };
 
   // Projects CRUD
@@ -410,10 +550,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updatePhase = (id: string, updates: Partial<ProjectPhase>) => {
+    const targetPhase = phases.find(p => p.id === id);
+    const oldProgress = targetPhase?.progress || 0;
+    
     setPhases(prev => prev.map(ph => ph.id === id ? { ...ph, ...updates } : ph));
     
+    // Check if progress was updated and trigger milestone notification
+    if (updates.progress !== undefined && updates.progress !== oldProgress) {
+      triggerPhaseUpdateNotification(id, oldProgress, updates.progress);
+    }
+    
     // Auto recalculate project overall progress
-    const targetPhase = phases.find(p => p.id === id);
     if (targetPhase) {
       const prjPhases = phases.map(ph => ph.id === id ? { ...ph, ...updates } : ph).filter(p => p.projectId === targetPhase.projectId);
       const totalBudget = prjPhases.reduce((acc, curr) => acc + curr.budget, 0) || 1;
@@ -766,6 +913,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateCurrentUser,
         settings,
         updateSettings,
+        alertSettings,
+        updateAlertSettings,
+        updateAlertRule,
         projects,
         selectedProjectId,
         setSelectedProjectId,
@@ -818,9 +968,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeTeamMember,
         notifications,
         unreadNotificationsCount,
+        criticalNotificationsCount,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         addNotification,
+        deleteNotification,
+        clearAllNotifications,
+        snoozeNotification,
+        runDeadlineScan,
+        triggerPhaseUpdateNotification,
         auditLogs,
         addAuditLog,
         navigationTab,
