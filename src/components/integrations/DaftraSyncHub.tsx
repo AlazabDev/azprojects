@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { DaftraService } from '../../services/daftraService';
 import { 
   Receipt, 
   RefreshCw, 
@@ -12,7 +13,8 @@ import {
   ShieldCheck,
   TrendingUp,
   ArrowUpRight,
-  Database
+  Database,
+  Loader2
 } from 'lucide-react';
 
 export const DaftraSyncHub: React.FC = () => {
@@ -26,13 +28,14 @@ export const DaftraSyncHub: React.FC = () => {
   } = useApp();
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
 
   const [newInvoiceData, setNewInvoiceData] = useState({
     clientOrSupplier: 'شركة اليمامة لحديد التسليح',
     amount: 68000,
     invoiceType: 'purchase',
-    description: 'توريد دفعة حديد إنشائي كود 12مم و 16مم',
+    description: 'توريد دفعة حديد إنشائي كود 12مم و 16مم (أمر عمل 17)',
     taxNumber: '31098451200003'
   });
 
@@ -42,18 +45,41 @@ export const DaftraSyncHub: React.FC = () => {
     setIsSyncing(false);
   };
 
-  const handleCreateDaftraInvoice = (e: React.FormEvent) => {
+  const handleCreateDaftraInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    handleSyncAll();
-    setShowCreateInvoiceModal(false);
-    addNotification({
-      userId: currentUser.id,
-      type: 'cost',
-      title: 'إنشاء فاتورة جديدة في دفترة',
-      message: `تم إنشاء فاتورة بقيمة ${newInvoiceData.amount.toLocaleString()} ر.س وإرسالها لدفترة.`,
-      priority: 'normal',
-      read: false
-    });
+    setIsSubmitting(true);
+    try {
+      await DaftraService.createInvoice(
+        {
+          client_id: 101,
+          date: new Date().toISOString().split('T')[0],
+          name: newInvoiceData.description,
+          notes: `فاتورة صادرة لمشروع ${selectedProject?.name || 'أرابيسك'} - مورد: ${newInvoiceData.clientOrSupplier}`
+        },
+        [
+          {
+            item: newInvoiceData.description,
+            unit_price: newInvoiceData.amount,
+            quantity: 1
+          }
+        ]
+      );
+      
+      await syncWithDaftra(selectedProject?.id);
+      setShowCreateInvoiceModal(false);
+      addNotification({
+        userId: currentUser.id,
+        type: 'cost',
+        title: 'ترحيل فاتورة جديدة إلى دفترة',
+        message: `تم إنشاء الفاتورة بقيمة ${newInvoiceData.amount.toLocaleString()} ر.س وترحيلها مباشرة إلى دفترة.`,
+        priority: 'normal',
+        read: false
+      });
+    } catch (err: any) {
+      console.error('Error creating invoice in Daftra:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const totalSyncedAmount = daftraRecords.reduce((acc, r) => acc + r.amount, 0);
@@ -271,9 +297,11 @@ export const DaftraSyncHub: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow-md hover:bg-emerald-700"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow-md hover:bg-emerald-700 transition disabled:opacity-50"
                 >
-                  ترحيل إلى دفترة
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  <span>ترحيل إلى دفترة</span>
                 </button>
               </div>
             </form>

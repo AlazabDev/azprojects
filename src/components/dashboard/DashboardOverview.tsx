@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { CostAnalysisChart } from './CostAnalysisChart';
 import { 
   Building2, 
   TrendingUp, 
@@ -51,7 +52,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
   
   const pendingTasks = tasks.filter(t => t.status === 'todo' || t.status === 'in-progress');
   const delayedTasks = tasks.filter(t => t.priority === 'critical' && t.status !== 'done');
-  const unassignedWhatsApp = whatsAppMessages.filter(w => w.status === 'received');
 
   const handleSyncAll = async () => {
     setIsSyncing(true);
@@ -133,6 +133,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
 
       </section>
 
+      {/* RECHARTS INTEGRATION: Cost Distribution & Variance vs Budget for Project Arabesque */}
+      <CostAnalysisChart 
+        projectId="PRJ-ARABESQUE" 
+        onNavigateToProject={(pId) => {
+          setSelectedProjectId(pId);
+          setNavigationTab('project-detail');
+        }}
+        onNavigateToCosts={() => {
+          setNavigationTab('costs');
+        }}
+      />
+
       {/* Main High Density 12-Col Dashboard Grid */}
       <div className="grid grid-cols-12 gap-4">
         
@@ -183,7 +195,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
                       >
                         <td className="p-3 font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${project.id === 'PRJ-ARABESQUE' ? 'bg-amber-500' : 'bg-indigo-500'}`}></span>
                             <span className="truncate max-w-[160px] sm:max-w-[220px]">{project.name}</span>
                           </div>
                         </td>

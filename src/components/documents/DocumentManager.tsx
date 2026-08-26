@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DocumentItem, DocumentType } from '../../types';
+import { GooglePickerButton } from './GooglePickerButton';
 import { 
   FileText, 
   UploadCloud, 
@@ -17,7 +18,8 @@ import {
   Tag, 
   Check, 
   Share2,
-  ExternalLink
+  ExternalLink,
+  HardDrive
 } from 'lucide-react';
 
 export const DocumentManager: React.FC = () => {
@@ -104,17 +106,21 @@ export const DocumentManager: React.FC = () => {
             <span>المستندات، المخططات الهندسية ورخص البناء ({projectDocuments.length} ملفات)</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            مستودع الوثائق الرقمية المعتمدة، تصاميم CAD، عقود المقاولين وتقارير الاستشاري
+            مستودع الوثائق الرقمية المعتمدة، تصاميم CAD، عقود المقاولين وتقارير الاستشاري متكامل مع Google Drive
           </p>
         </div>
 
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition"
-        >
-          <UploadCloud className="w-4 h-4" />
-          <span>رفع مستند جديد</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <GooglePickerButton />
+          
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition"
+          >
+            <UploadCloud className="w-4 h-4" />
+            <span>إضافة رابط مخصص</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -329,12 +335,18 @@ export const DocumentManager: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">رابط الملف / الصورة</label>
-                <input
-                  type="url"
-                  value={uploadData.fileUrl}
-                  onChange={(e) => setUploadData({ ...uploadData, fileUrl: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 outline-none text-slate-900 dark:text-white"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={uploadData.fileUrl}
+                    onChange={(e) => setUploadData({ ...uploadData, fileUrl: e.target.value })}
+                    className="flex-1 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 outline-none text-slate-900 dark:text-white"
+                  />
+                  <GooglePickerButton 
+                    variant="compact"
+                    onImportComplete={() => setShowUploadModal(false)}
+                  />
+                </div>
               </div>
 
               <div>

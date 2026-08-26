@@ -295,6 +295,26 @@ export const SystemSettings: React.FC = () => {
             />
           </div>
 
+          {/* Google Drive & Google Picker Status */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <img 
+                  src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" 
+                  alt="Google Drive" 
+                  className="w-4 h-4" 
+                />
+                <span className="font-bold text-slate-800 dark:text-slate-200">تكامل Google Drive & Google Picker</span>
+              </div>
+              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-[10px] rounded-md">
+                OAuth مفعل
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              صلاحيات الوصول المعتمدة: <code className="font-mono text-blue-600 dark:text-blue-400 text-[10px]">drive.file</code> و <code className="font-mono text-blue-600 dark:text-blue-400 text-[10px]">drive.metadata.readonly</code>. يتيح استيراد مخططات CAD، ملفات DWG، رخص البناء والوثائق مباشرة من Google Drive.
+            </p>
+          </div>
+
           <button
             type="submit"
             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs transition"
