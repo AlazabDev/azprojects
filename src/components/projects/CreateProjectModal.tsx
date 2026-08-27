@@ -73,18 +73,18 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-3xl overflow-hidden my-8 animate-in fade-in zoom-in-95">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-3xl overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-blue-600 text-white shadow-sm">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">إنشاء مشروع معماري جديد</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">توليد المراحل الهندسية القياسية والميزانية التخطيطية</p>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">إنشاء مشروع معماري جديد</h2>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">توليد المراحل الهندسية القياسية والميزانية التخطيطية</p>
             </div>
           </div>
           <button
@@ -96,7 +96,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[80vh] sm:max-h-[75vh] overflow-y-auto pb-[calc(env(safe-area-inset-bottom,16px)+1rem)] sm:pb-6">
           
           {/* Project Name & English Name */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

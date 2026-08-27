@@ -41,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -93,27 +94,51 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
   };
 
   return (
-    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 lg:px-8 shrink-0 transition-colors z-30">
+    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 sm:px-6 lg:px-8 shrink-0 transition-colors z-30 relative">
       
+      {/* Mobile Search Overlay Bar */}
+      {showMobileSearch && (
+        <div className="absolute inset-0 bg-white dark:bg-slate-900 z-40 px-3 flex items-center gap-2 animate-in fade-in duration-150">
+          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            autoFocus
+            placeholder="بحث في المشاريع، المهام، التكاليف والمستندات..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3 py-2 outline-none border border-slate-200 dark:border-slate-700"
+          />
+          <button
+            onClick={() => {
+              setShowMobileSearch(false);
+              setSearchQuery('');
+            }}
+            className="p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg bg-slate-100 dark:bg-slate-800"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Right / Start: Mobile Toggle & Page Title & Project Selector */}
-      <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
         {onToggleSidebar && (
           <button
             onClick={onToggleSidebar}
-            className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white lg:hidden rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-            title="القائمة"
+            className="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white lg:hidden rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 touch-manipulation"
+            title="القائمة الجانبية"
           >
             <Menu className="w-5 h-5" />
           </button>
         )}
 
         <div className="min-w-0">
-          <h1 className="text-sm sm:text-base lg:text-lg font-semibold text-slate-900 dark:text-white truncate">
+          <h1 className="text-sm sm:text-base lg:text-lg font-bold text-slate-900 dark:text-white truncate">
             {getPageTitle()}
           </h1>
         </div>
 
-        {/* Quick Project Select Dropdown */}
+        {/* Quick Project Select Dropdown - Visible on Tablet and Desktop */}
         <div className="relative hidden md:flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-200">
           <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
           <select 
@@ -129,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
           </select>
         </div>
 
-        {/* Global Search Bar */}
+        {/* Global Search Bar - Desktop */}
         <div className="relative hidden xl:block w-64">
           <Search className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
@@ -151,11 +176,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
       </div>
 
       {/* Left / End Section: Time Indicator, Sync, Role Switcher, Notifications, New Project */}
-      <div className="flex items-center gap-2.5 sm:gap-3 text-xs text-slate-500 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 text-xs text-slate-500 shrink-0">
         
+        {/* Mobile Search Icon Toggle */}
+        <button
+          onClick={() => setShowMobileSearch(true)}
+          className="xl:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition"
+          title="بحث سريع"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
         {/* Live Clock Indicator */}
         {currentTime && (
-          <span className="hidden sm:inline text-xs font-mono text-slate-500 dark:text-slate-400">
+          <span className="hidden lg:inline text-xs font-mono text-slate-500 dark:text-slate-400">
             الساعة: {currentTime}
           </span>
         )}
@@ -166,27 +200,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
         <button
           onClick={handleGlobalSync}
           disabled={isSyncing}
-          className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition"
+          className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition"
           title="مزامنة شاملة مع دفترة و MagicPlan"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-indigo-600' : ''}`} />
+          <RefreshCw className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${isSyncing ? 'animate-spin text-indigo-600' : ''}`} />
         </button>
 
         {/* RBAC Role Switcher */}
         <div className="relative">
           <button
             onClick={() => setShowRoleMenu(!showRoleMenu)}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-lg border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-lg border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition"
             title="تبديل دور المستخدم لمعاينة الصلاحيات (RBAC)"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-            <span className="hidden md:inline font-semibold">{getRoleLabel(activeRole).split(' ')[0]}</span>
+            <span className="hidden sm:inline font-semibold">{getRoleLabel(activeRole).split(' ')[0]}</span>
             <span className="text-[9px] opacity-75">▼</span>
           </button>
 
           {showRoleMenu && (
             <div 
-              className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-100"
+              className="absolute left-0 mt-2 w-72 max-w-[90vw] bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-100"
               onClick={() => setShowRoleMenu(false)}
             >
               <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-700/60 mb-1">
@@ -217,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition"
+            className="relative p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition"
             title="الإشعارات والتنبيهات"
           >
             <Bell className="w-4 h-4" />
@@ -229,7 +263,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
           </button>
 
           {showNotifications && (
-            <div className="absolute left-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-3 z-50">
+            <div className="absolute left-0 mt-2 w-80 max-w-[92vw] bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-3 z-50">
               <div className="flex items-center justify-between px-4 pb-2 border-b border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-1.5">
                   <Bell className="w-3.5 h-3.5 text-indigo-600" />
@@ -295,10 +329,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewProject, onToggleSideba
         {/* High Density CTA Button */}
         <button
           onClick={onOpenNewProject}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-4 py-1.5 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 sm:px-4 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-xs transition"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>مشروع جديد</span>
+          <span className="hidden xs:inline">مشروع جديد</span>
+          <span className="xs:hidden">جديد</span>
         </button>
 
       </div>

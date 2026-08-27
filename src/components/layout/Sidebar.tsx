@@ -22,9 +22,16 @@ import {
 interface SidebarProps {
   isOpen: boolean;
   onCloseMobile: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  isOpen, 
+  onCloseMobile,
+  isCollapsed = false,
+  onToggleCollapse 
+}) => {
   const { 
     navigationTab, 
     setNavigationTab, 
@@ -155,35 +162,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
 
       <aside className={`
         fixed lg:static top-0 right-0 z-40
-        h-screen w-64 bg-slate-900 text-white flex flex-col shrink-0
-        border-l border-slate-800 transition-transform duration-200 ease-in-out
-        ${isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+        h-screen bg-slate-900 text-white flex flex-col shrink-0
+        border-l border-slate-800 transition-all duration-200 ease-in-out
+        ${isOpen ? 'translate-x-0 w-64' : 'translate-x-full lg:translate-x-0'}
+        ${isCollapsed ? 'lg:w-18' : 'lg:w-64'}
       `}>
         {/* Brand Header */}
-        <div className="p-4 lg:p-5 flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center font-bold text-base text-white shadow-xs">
+        <div className="p-3.5 lg:p-4 flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center font-bold text-base text-white shadow-xs shrink-0">
               A
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg font-bold tracking-tight text-white">AzProjects</span>
-                <span className="text-[9px] px-1 py-0.2 font-bold uppercase rounded bg-indigo-500/30 text-indigo-300 border border-indigo-500/40">v2.4</span>
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base font-bold tracking-tight text-white truncate">AzProjects</span>
+                  <span className="text-[9px] px-1 py-0.2 font-bold uppercase rounded bg-indigo-500/30 text-indigo-300 border border-indigo-500/40">v2.4</span>
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium truncate">إدارة المشاريع المعمارية</p>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">إدارة المشاريع المعمارية</p>
-            </div>
+            )}
           </div>
-          <button 
-            onClick={onCloseMobile}
-            className="p-1 text-slate-400 hover:text-white lg:hidden rounded-md hover:bg-slate-800"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+          
+          <div className="flex items-center">
+            {onToggleCollapse && (
+              <button 
+                onClick={onToggleCollapse}
+                className="hidden lg:flex p-1 text-slate-400 hover:text-white rounded-md hover:bg-slate-800"
+                title={isCollapsed ? 'توسيع القائمة' : 'تصغير القائمة'}
+              >
+                <ChevronLeft className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+            <button 
+              onClick={onCloseMobile}
+              className="p-1 text-slate-400 hover:text-white lg:hidden rounded-md hover:bg-slate-800"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Selected Project Quick Status Card */}
-        {selectedProject && (
-          <div className="mx-2.5 mt-2.5 p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/60 flex flex-col gap-1.5">
+        {selectedProject && !isCollapsed && (
+          <div className="mx-2.5 mt-2.5 p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/60 flex flex-col gap-1.5 animate-in fade-in duration-150">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wider">المشروع النشط</span>
               <span className="text-[11px] font-bold text-emerald-400">{selectedProject.progress}%</span>
@@ -206,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
         )}
 
         {/* Navigation Items List */}
-        <nav className="flex-1 py-3 px-2.5 space-y-0.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = navigationTab === item.id || (item.id === 'reports-ai' && navigationTab === 'reports') || (item.id === 'deftera' && navigationTab === 'daftra');
@@ -217,8 +239,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
                   setNavigationTab(item.id);
                   onCloseMobile();
                 }}
+                title={isCollapsed ? item.label : undefined}
                 className={`
-                  w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition group
+                  w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'} rounded-lg text-xs font-medium transition group
                   ${isActive 
                     ? 'bg-indigo-600 text-white font-semibold shadow-xs' 
                     : item.highlight
@@ -227,11 +250,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
                   }
                 `}
               >
-                <div className="flex items-center gap-2.5 truncate">
+                <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'} truncate relative`}>
                   <Icon className={`w-4 h-4 shrink-0 transition-transform ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`} />
-                  <span className="truncate">{item.label}</span>
+                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+                  {isCollapsed && item.badge && (
+                    <span className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full bg-rose-500"></span>
+                  )}
                 </div>
-                {item.badge && (
+                {!isCollapsed && item.badge && (
                   <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${item.badgeColor || (isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300 border border-slate-700')}`}>
                     {item.badge}
                   </span>
@@ -242,29 +268,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onCloseMobile }) => {
         </nav>
 
         {/* User Profile Card & Footer Actions */}
-        <div className="p-3 border-t border-slate-800 flex flex-col gap-2">
+        <div className="p-2.5 border-t border-slate-800 flex flex-col gap-2">
           {/* User Badge */}
           <div 
             onClick={() => setNavigationTab('settings')}
-            className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer transition"
+            title={isCollapsed ? currentUser.name : undefined}
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'} p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer transition`}
           >
             <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-900 flex items-center justify-center font-bold text-xs shrink-0">
               {getInitials(currentUser.name || 'أحمد محمد')}
             </div>
-            <div className="min-w-0 flex-1 text-right">
-              <div className="text-xs font-bold text-slate-100 truncate">{currentUser.name || 'أحمد محمد'}</div>
-              <div className="text-[10px] text-slate-400 truncate">{getRoleLabel(activeRole)}</div>
-            </div>
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1 text-right">
+                <div className="text-xs font-bold text-slate-100 truncate">{currentUser.name || 'أحمد محمد'}</div>
+                <div className="text-[10px] text-slate-400 truncate">{getRoleLabel(activeRole)}</div>
+              </div>
+            )}
           </div>
 
-          <button
-            onClick={resetToDefaultData}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 text-[11px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md border border-slate-800 transition"
-            title="استعادة البيانات النموذجية الأولية"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>استعادة البيانات</span>
-          </button>
+          {!isCollapsed && (
+            <button
+              onClick={resetToDefaultData}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 text-[11px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md border border-slate-800 transition"
+              title="استعادة البيانات النموذجية الأولية"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>استعادة البيانات</span>
+            </button>
+          )}
         </div>
 
       </aside>
