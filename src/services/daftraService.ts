@@ -133,6 +133,44 @@ const API_BASE = '/api/daftra';
 
 export class DaftraService {
   /**
+   * Test direct live connection to Daftra
+   */
+  static async testConnection(credentials?: { apiKey?: string; subdomain?: string }): Promise<{
+    success: boolean;
+    isLive: boolean;
+    status: string;
+    latencyMs: number;
+    message: string;
+    data?: any;
+  }> {
+    try {
+      const response = await fetch('/api/daftra/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials || {})
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+      return {
+        success: false,
+        isLive: false,
+        status: 'error',
+        latencyMs: 0,
+        message: `HTTP error ${response.status}: ${response.statusText}`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        isLive: false,
+        status: 'network_error',
+        latencyMs: 0,
+        message: err.message || 'فشل الاتصال بسيرفر دفترة'
+      };
+    }
+  }
+
+  /**
    * Test connection and retrieve site info
    */
   static async getSiteInfo(): Promise<any> {

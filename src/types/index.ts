@@ -423,6 +423,7 @@ export interface AppSettings {
   daftraWorkOrderUrl?: string;
   daftraBaseUrl?: string;
   magicplanApiKey: string;
+  magicplanCustomerKey?: string;
   magicplanProjectId?: string;
   whatsappWebhookUrl: string;
   autoSyncDaftra: boolean;

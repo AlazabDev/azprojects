@@ -166,6 +166,45 @@ const API_BASE = '/api/magicplan';
 
 export class MagicPlanService {
   /**
+   * Test direct live connection to MagicPlan Cloud v2
+   */
+  static async testConnection(credentials?: { apiKey?: string; customerKey?: string }): Promise<{
+    success: boolean;
+    isLive: boolean;
+    status: string;
+    latencyMs: number;
+    projectCount?: number;
+    message: string;
+    data?: any;
+  }> {
+    try {
+      const response = await fetch('/api/magicplan/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials || {})
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+      return {
+        success: false,
+        isLive: false,
+        status: 'error',
+        latencyMs: 0,
+        message: `HTTP error ${response.status}: ${response.statusText}`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        isLive: false,
+        status: 'network_error',
+        latencyMs: 0,
+        message: err.message || 'فشل الاتصال بسيرفر MagicPlan Cloud'
+      };
+    }
+  }
+
+  /**
    * List all projects from magicplan Cloud
    */
   static async listProjects(pageSize = 20, page = 1): Promise<MagicPlanApiResponse<MagicPlanProject[]>> {
