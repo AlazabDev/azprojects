@@ -19,6 +19,7 @@ import { AIAssistantPage } from '../pages/ai/AIAssistantPage';
 import { SuppliersPage } from '../pages/suppliers/SuppliersPage';
 import { NotificationsPage } from '../pages/notifications/NotificationsPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
+import { ClientGovernancePage } from '../pages/governance/ClientGovernancePage';
 
 interface AppRoutesProps {
   onOpenNewProject: () => void;
@@ -71,12 +72,18 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ onOpenNewProject }) => {
     case 'documents':
       return <DocumentsPage />;
     
+    case 'client-governance':
+    case 'governance':
+      return <ClientGovernancePage />;
+    
     case 'integrations':
       return <IntegrationsHubPage />;
     
     case 'edge-functions':
       return <EdgeFunctionsPage />;
     
+    case 'field-communication':
+    case 'communication':
     case 'whatsapp':
       return <WhatsAppPage />;
     

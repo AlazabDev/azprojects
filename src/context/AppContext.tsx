@@ -122,6 +122,8 @@ interface AppContextType {
   whatsAppMessages: WhatsAppMessage[];
   addWhatsAppMessage: (msg: Omit<WhatsAppMessage, 'id' | 'receivedAt'>) => void;
   assignWhatsAppMessage: (msgId: string, projectId: string, phaseId?: string) => void;
+  linkWhatsAppMessageToPhase: (msgId: string, phaseId: string) => void;
+  unlinkWhatsAppMessageFromPhase: (msgId: string) => void;
 
   // Team
   teamMembers: TeamMember[];
@@ -1043,6 +1045,93 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog('توجيه رسالة واتساب', 'integration', msgId, `ربط مراسلة واتساب بمشروع ${projects.find(p => p.id === prjId)?.name}`, prjId);
   };
 
+  const linkWhatsAppMessageToPhase = (msgId: string, phaseId: string) => {
+    const targetPhase = phases.find(p => p.id === phaseId);
+    if (!targetPhase) return;
+    const targetProject = projects.find(p => p.id === targetPhase.projectId);
+
+    setWhatsAppMessages(prev => prev.map(m => {
+      if (m.id === msgId) {
+        return {
+          ...m,
+          projectId: targetPhase.projectId,
+          projectName: targetProject?.name || m.projectName,
+          assignedToPhaseId: targetPhase.id,
+          assignedToPhaseName: targetPhase.name,
+          status: 'assigned',
+          processedAt: new Date().toISOString()
+        };
+      }
+      return m;
+    }));
+
+    const msg = whatsAppMessages.find(m => m.id === msgId);
+    if (msg && msg.mediaUrls && msg.mediaUrls.length > 0) {
+      const docName = msg.mediaName || ('مستند_ميداني_مرحلة_' + targetPhase.name.replace(/\s+/g, '_') + '_' + Date.now() + (msg.mediaType?.includes('pdf') ? '.pdf' : '.jpg'));
+      const alreadyDoc = documents.some(d => d.fileUrl === msg.mediaUrls?.[0] && d.phaseId === targetPhase.id);
+      
+      if (!alreadyDoc) {
+        addDocument({
+          projectId: targetPhase.projectId,
+          projectName: targetProject?.name,
+          phaseId: targetPhase.id,
+          phaseName: targetPhase.name,
+          name: docName,
+          description: `مرفق اتصال ميداني عبر واتساب من ${msg.senderName} (${msg.senderPhone}) مرتبط بمرحلة: ${targetPhase.name}`,
+          fileUrl: msg.mediaUrls[0],
+          fileType: msg.mediaType || 'image/jpeg',
+          fileSize: 3200000,
+          version: 1,
+          documentType: msg.classifiedType === 'invoice' ? 'invoice' : (msg.classifiedType === 'report' ? 'report' : 'photo'),
+          uploadedBy: currentUser.id,
+          uploadedByName: `${msg.senderName} (واتساب الميدان)`,
+          tags: ['واتساب', 'ميداني', targetPhase.name, msg.classifiedType || 'توثيق'],
+          isPublic: true
+        });
+      }
+    }
+
+    addAuditLog(
+      'ربط رسالة بمرحلة',
+      'integration',
+      msgId,
+      `تم ربط مراسلة واتساب من "${msg?.senderName || 'الميدان'}" بمرحلة "${targetPhase.name}" في مشروع "${targetProject?.name || ''}"`,
+      targetPhase.projectId
+    );
+
+    addNotification({
+      userId: currentUser.id,
+      type: 'whatsapp',
+      category: 'whatsapp_media',
+      title: `ربط رسالة واتساب بمرحلة: ${targetPhase.name}`,
+      message: `تم توجيه وتوثيق رسالة ومرفقات ${msg?.senderName || 'الموقع'} بنجاح ضمن مرحلة "${targetPhase.name}".`,
+      priority: 'normal',
+      read: false,
+      projectId: targetPhase.projectId,
+      projectName: targetProject?.name,
+      phaseId: targetPhase.id,
+      phaseName: targetPhase.name
+    });
+
+    triggerConfetti();
+  };
+
+  const unlinkWhatsAppMessageFromPhase = (msgId: string) => {
+    setWhatsAppMessages(prev => prev.map(m => {
+      if (m.id === msgId) {
+        return {
+          ...m,
+          assignedToPhaseId: undefined,
+          assignedToPhaseName: undefined,
+          status: 'received'
+        };
+      }
+      return m;
+    }));
+
+    addAuditLog('إلغاء ربط رسالة بمرحلة', 'integration', msgId, 'تم فك ارتباط مراسلة واتساب بالمرحلة الإنشائية');
+  };
+
   // Team
   const addTeamMember = (memberData: Omit<TeamMember, 'id' | 'joinedAt'>) => {
     const newMember: TeamMember = {
@@ -1147,6 +1236,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         whatsAppMessages,
         addWhatsAppMessage,
         assignWhatsAppMessage,
+        linkWhatsAppMessageToPhase,
+        unlinkWhatsAppMessageFromPhase,
         teamMembers,
         projectTeamMembers,
         addTeamMember,

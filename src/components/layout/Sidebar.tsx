@@ -4,6 +4,7 @@ import { useAuthContext } from '../../context/AuthContext';
 import { 
   LayoutDashboard,
   Building2,
+  ShieldCheck,
   Layers,
   CheckSquare,
   Compass,
@@ -47,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setNavigationTab, 
     projects,
     tasks,
+    whatsAppMessages,
     activeRole
   } = useApp();
 
@@ -54,6 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const displayRole = authUser?.role || activeRole || 'owner';
   const roleLabel = getRoleLabel(displayRole).split(' ')[0] || 'المالك';
+  const unlinkedWhatsAppCount = whatsAppMessages?.filter(m => !m.assignedToPhaseId).length || 0;
 
   // Navigation Items - Each item has an Icon beside the Page Name
   const navItems: NavItem[] = [
@@ -67,6 +70,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'المشاريع المعمارية',
       icon: Building2,
       badge: projects.length > 0 ? projects.length : undefined
+    },
+    {
+      id: 'client-governance',
+      label: 'حوكمة ومزامنة العملاء (RLS)',
+      icon: ShieldCheck,
+      badge: '4 حية'
     },
     {
       id: 'phases',
@@ -101,9 +110,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       isAi: true
     },
     {
-      id: 'whatsapp',
-      label: 'واتساب الميداني والوسائط',
-      icon: MessageSquare
+      id: 'field-communication',
+      label: 'الاتصالات الميدانية (WhatsApp)',
+      icon: MessageSquare,
+      badge: unlinkedWhatsAppCount > 0 ? unlinkedWhatsAppCount : undefined
     },
     {
       id: 'suppliers',
@@ -140,11 +150,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar Container */}
       <aside 
         className={`
-          fixed lg:static top-0 right-0 z-40
-          h-screen bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 flex flex-col shrink-0
+          relative z-30
+          h-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 flex flex-col shrink-0
           border-l border-slate-200 dark:border-slate-800 transition-all duration-200 ease-in-out select-none
-          ${isOpen ? 'translate-x-0' : 'translate-x-0'}
-          ${isCollapsed ? 'w-[68px]' : 'w-64'}
+          ${isCollapsed ? 'w-16' : 'w-64'}
         `} 
         dir="rtl"
       >
@@ -193,6 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const Icon = item.icon;
             const isActive = 
               navigationTab === item.id || 
+              (item.id === 'field-communication' && (navigationTab === 'whatsapp' || navigationTab === 'communication' || navigationTab === 'field-communication')) ||
               (item.id === 'reports' && (navigationTab === 'reports-ai' || navigationTab === 'ai-assistant')) ||
               (item.id === 'costs' && (navigationTab === 'daftra' || navigationTab === 'deftera')) ||
               (item.id === 'projects' && navigationTab === 'project-detail');
@@ -232,7 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         }
                       `} />
 
-                      {/* Clean Badge Dot anchored to the top-left of the icon (safely within the 68px box) */}
+                      {/* Clean Badge Dot anchored to the top-left of the icon */}
                       {item.badge !== undefined && (
                         <span className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-indigo-600 ring-2 ring-white dark:ring-slate-900" />
                       )}

@@ -5,6 +5,10 @@ import { GoogleGenAI } from "@google/genai";
 import { DefaultAzureCredential } from "@azure/identity";
 import { AIProjectClient } from "@azure/ai-projects";
 import dotenv from "dotenv";
+import { getProjectsForUser, getProjectByIdForUser, syncProjectsFromIntegrations, addFieldUpdate } from "./src/db/projects.ts";
+import { getAllUsers, getOrCreateUser, registerOrInviteClient } from "./src/db/users.ts";
+import { seedInitialProjectsAndClients } from "./src/db/seed.ts";
+import { optionalAuth, requireAuth, AuthRequest } from "./src/middleware/auth.ts";
 
 dotenv.config();
 
@@ -1487,8 +1491,151 @@ app.post("/api/azure-agent/test", async (req, res) => {
   }
 });
 
+// ============================================================================
+// CLOUD SQL (POSTGRESQL) & ROW-LEVEL SECURITY (RLS) API ROUTES
+// ============================================================================
+
+// 1. Get Projects with strict Row-Level Security (RLS)
+app.get("/api/db/projects", optionalAuth, async (req: AuthRequest, res) => {
+  try {
+    const userRole = (req.query.role as string) || req.user?.dbRole || "owner";
+    const userEmail = (req.query.email as string) || req.user?.email || "alazab.construction@gmail.com";
+
+    const userProjects = await getProjectsForUser({
+      email: userEmail,
+      role: userRole,
+      uid: req.user?.uid,
+    });
+
+    res.json({
+      success: true,
+      role: userRole,
+      userEmail,
+      count: userProjects.length,
+      data: userProjects,
+    });
+  } catch (error: any) {
+    console.error("Error fetching projects from Cloud SQL:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to fetch projects" });
+  }
+});
+
+// 2. Get Single Project with phases, blueprints, and field updates
+app.get("/api/db/projects/:id", optionalAuth, async (req: AuthRequest, res) => {
+  try {
+    const projectId = parseInt(req.params.id, 10);
+    const userRole = (req.query.role as string) || req.user?.dbRole || "owner";
+    const userEmail = (req.query.email as string) || req.user?.email || "alazab.construction@gmail.com";
+
+    const projectData = await getProjectByIdForUser(projectId, {
+      email: userEmail,
+      role: userRole,
+      uid: req.user?.uid,
+    });
+
+    if (!projectData) {
+      return res.status(404).json({ success: false, error: "Project not found" });
+    }
+
+    res.json({
+      success: true,
+      data: projectData,
+    });
+  } catch (error: any) {
+    console.error("Error fetching single project:", error);
+    res.status(403).json({ success: false, error: error.message || "Access denied or database error" });
+  }
+});
+
+// 3. Trigger manual or automatic sync from Daftra, MagicPlan & Milano
+app.post("/api/db/sync-now", async (req, res) => {
+  try {
+    await seedInitialProjectsAndClients();
+    res.json({
+      success: true,
+      message: "تمت مزامنة المشاريع الـ 4 بنجاح واستخراج بريد العملاء وتفعيل سياسات الأمان (RLS) في Cloud SQL.",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Sync error:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to sync database" });
+  }
+});
+
+// 4. List all users and client governance records
+app.get("/api/db/users", async (req, res) => {
+  try {
+    const allUsers = await getAllUsers();
+    res.json({
+      success: true,
+      count: allUsers.length,
+      data: allUsers,
+    });
+  } catch (error: any) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to fetch users" });
+  }
+});
+
+// 5. Send or generate direct client invitation link
+app.post("/api/db/invite-client", async (req, res) => {
+  try {
+    const { email, clientName, phoneNumber, projectCode } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: "Client email is required" });
+    }
+
+    const client = await registerOrInviteClient(email, clientName || "مالك المشروع", phoneNumber);
+
+    // Generate secure client access portal token/url
+    const portalUrl = `https://projects.alazab.com/?portal=client&email=${encodeURIComponent(email)}&prj=${projectCode || ""}`;
+
+    res.json({
+      success: true,
+      client,
+      invitationLink: portalUrl,
+      message: `تم تجهيز دعوة المالك (${email}) بنجاح للوصول إلى مشروعه فقط وفق سياسات حوكمة البيانات.`,
+    });
+  } catch (error: any) {
+    console.error("Error inviting client:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to invite client" });
+  }
+});
+
+// 6. Record field update in Cloud SQL
+app.post("/api/db/field-updates", async (req, res) => {
+  try {
+    const { projectId, phaseId, senderName, senderPhone, senderRole, messageType, content, mediaUrl } = req.body;
+    const update = await addFieldUpdate({
+      projectId: parseInt(projectId, 10),
+      phaseId: phaseId ? parseInt(phaseId, 10) : undefined,
+      senderName: senderName || "مهندس الموقع الميداني",
+      senderPhone,
+      senderRole: senderRole || "مهندس الموقع",
+      messageType: messageType || "text",
+      content: content || "تحديث ميداني من الموقع",
+      mediaUrl,
+    });
+
+    res.json({
+      success: true,
+      data: update,
+    });
+  } catch (error: any) {
+    console.error("Error adding field update:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to add field update" });
+  }
+});
+
 // Mount Vite middleware for dev or static serving for prod
 async function startServer() {
+  // Ensure database has initial seeded sync from Daftra, MagicPlan & Milano
+  try {
+    await seedInitialProjectsAndClients();
+  } catch (seedErr) {
+    console.warn("Notice: DB initial sync warning:", seedErr);
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },

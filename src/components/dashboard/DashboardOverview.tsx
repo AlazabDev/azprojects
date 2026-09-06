@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CostAnalysisChart } from './CostAnalysisChart';
+import { ArchitecturalDocumentsTab } from './ArchitecturalDocumentsTab';
 import { 
   Building2, 
   TrendingUp, 
@@ -17,14 +18,20 @@ import {
   Compass,
   FileDown,
   Bell,
-  ChevronLeft
+  ChevronLeft,
+  LayoutDashboard,
+  RefreshCw,
+  FileText,
+  Download,
+  Eye
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
   onOpenNewProject: () => void;
+  initialTab?: 'overview' | 'architectural-docs';
 }
 
-export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewProject }) => {
+export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewProject, initialTab = 'overview' }) => {
   const { 
     projects, 
     phases, 
@@ -40,6 +47,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
     syncWithMagicPlan 
   } = useApp();
 
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'architectural-docs'>(initialTab);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // High-level KPI aggregations
@@ -66,84 +74,205 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
   };
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-5 pb-8">
       
-      {/* Top 4 KPI Metrics Grid (High Density) */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Metric 1: Active Projects */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1 flex items-center justify-between">
-            <span>المشاريع النشطة</span>
-            <Building2 className="w-4 h-4 text-indigo-500" />
-          </div>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">{activeProjects}</span>
-            <span className="text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-center gap-0.5">
-              <span>↑ 2 هذا الشهر</span>
+      {/* Top Dashboard Tabs Navigation Switcher */}
+      <div className="flex items-center justify-between pb-2 flex-wrap gap-3 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700">
+          <button
+            onClick={() => setDashboardTab('overview')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              dashboardTab === 'overview'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>لوحة المؤشرات والمتابعة</span>
+          </button>
+
+          <button
+            onClick={() => setDashboardTab('architectural-docs')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              dashboardTab === 'architectural-docs'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Compass className="w-4 h-4 text-indigo-500" />
+            <span>المستندات المعمارية ومخططات MagicPlan</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+              7 مخططات
             </span>
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">إجمالي {totalProjects} مشاريع معمارية</p>
+          </button>
         </div>
 
-        {/* Metric 2: Overall Progress */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1 flex items-center justify-between">
-            <span>نسبة الإنجاز الكلية</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">{avgProgress}%</span>
-            <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden self-center">
-              <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${avgProgress}%` }}></div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncAll}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+            title="مزامنة شاملة للبيانات والمخططات"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? 'جاري المزامنة...' : 'مزامنة السحابة'}</span>
+          </button>
+          <button
+            onClick={onOpenNewProject}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>مشروع جديد</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Conditionally Render Architectural Documents Tab OR Full Dashboard Overview */}
+      {dashboardTab === 'architectural-docs' ? (
+        <ArchitecturalDocumentsTab />
+      ) : (
+        <div className="space-y-4">
+          
+          {/* Top 4 KPI Metrics Grid (High Density) */}
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Metric 1: Active Projects */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1 flex items-center justify-between">
+                <span>المشاريع النشطة</span>
+                <Building2 className="w-4 h-4 text-indigo-500" />
+              </div>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="text-2xl font-bold text-slate-900 dark:text-white">{activeProjects}</span>
+                <span className="text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-center gap-0.5">
+                  <span>↑ 2 هذا الشهر</span>
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">إجمالي {totalProjects} مشاريع معمارية</p>
             </div>
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">متوسط تقدم كافة المواقع الميدانية</p>
-        </div>
 
-        {/* Metric 3: Spent Budget */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1 flex items-center justify-between">
-            <span>الميزانية المصروفة</span>
-            <DollarSign className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              {(totalActualCost / 1000).toFixed(1)}K
-            </span>
-            <span className="text-slate-400 text-xs font-normal">ريال</span>
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">
-            من إجمالي {(totalBudget / 1000).toFixed(1)}K ر.س المعتمدة
-          </p>
-        </div>
+            {/* Metric 2: Overall Progress */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1 flex items-center justify-between">
+                <span>نسبة الإنجاز الكلية</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold text-slate-900 dark:text-white">{avgProgress}%</span>
+                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden self-center">
+                  <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${avgProgress}%` }}></div>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">متوسط تقدم كافة المواقع الميدانية</p>
+            </div>
 
-        {/* Metric 4: Delayed/Critical Tasks */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-          <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1 flex items-center justify-between">
-            <span>المهام المتأخرة والعاجلة</span>
-            <Clock className="w-4 h-4 text-rose-500" />
-          </div>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">{delayedTasks.length || 4}</span>
-            <span className="text-rose-600 dark:text-rose-400 text-xs font-medium">تتطلب تدخل</span>
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">من أصل {pendingTasks.length} مهام جارية</p>
-        </div>
+            {/* Metric 3: Spent Budget */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1 flex items-center justify-between">
+                <span>الميزانية المصروفة</span>
+                <DollarSign className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                  {(totalActualCost / 1000).toFixed(1)}K
+                </span>
+                <span className="text-slate-400 text-xs font-normal">ريال</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                من إجمالي {(totalBudget / 1000).toFixed(1)}K ر.س المعتمدة
+              </p>
+            </div>
 
-      </section>
+            {/* Metric 4: Delayed/Critical Tasks */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+              <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold mb-1 flex items-center justify-between">
+                <span>المهام المتأخرة والعاجلة</span>
+                <Clock className="w-4 h-4 text-rose-500" />
+              </div>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">{delayedTasks.length || 4}</span>
+                <span className="text-rose-600 dark:text-rose-400 text-xs font-medium">تتطلب تدخل</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">من أصل {pendingTasks.length} مهام جارية</p>
+            </div>
 
-      {/* RECHARTS INTEGRATION: Cost Distribution & Variance vs Budget for Project Arabesque */}
-      <CostAnalysisChart 
-        projectId="PRJ-ARABESQUE" 
-        onNavigateToProject={(pId) => {
-          setSelectedProjectId(pId);
-          setNavigationTab('project-detail');
-        }}
-        onNavigateToCosts={() => {
-          setNavigationTab('costs');
-        }}
-      />
+          </section>
+
+          {/* Dual Action Strip: Architectural Blueprints & Real-Time Field Communication */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* 1. Architectural Blueprints Showcase */}
+            <div className="bg-gradient-to-r from-indigo-900/90 to-slate-900 text-white p-4 rounded-xl border border-indigo-800/50 shadow-xs flex flex-col justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-indigo-500/30 border border-indigo-400/40 text-indigo-300 flex items-center justify-center shrink-0">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs sm:text-sm font-bold text-white">
+                      مستودع المخططات المعمارية (MagicPlan)
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-500/40 text-indigo-200">
+                      جاهز للتحميل
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    مساقط أفقية ومخططات تنفيذية بصيغ PDF و CAD جاهزة للتنفيذ.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDashboardTab('architectural-docs')}
+                className="px-3 py-1.5 bg-white text-indigo-900 hover:bg-indigo-50 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs self-start"
+              >
+                <span>فتح المستندات المعمارية</span>
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* 2. Real-Time Field Communication & WhatsApp Phase Linker */}
+            <div className="bg-gradient-to-r from-emerald-950/90 to-slate-900 text-white p-4 rounded-xl border border-emerald-800/50 shadow-xs flex flex-col justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/30 border border-emerald-400/40 text-emerald-300 flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs sm:text-sm font-bold text-white">
+                      الاتصالات الميدانية (WhatsApp Live)
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/40 text-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      بث مباشر
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    متابعة تحديثات المهندسين والموقع لحظياً وربط الرسائل بالمراحل.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setNavigationTab('field-communication')}
+                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs self-start"
+              >
+                <span>فتح الاتصالات الميدانية والمراحل</span>
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+          </div>
+
+          {/* RECHARTS INTEGRATION: Cost Distribution & Variance vs Budget for Project Arabesque */}
+          <CostAnalysisChart 
+            projectId="PRJ-ARABESQUE" 
+            onNavigateToProject={(pId) => {
+              setSelectedProjectId(pId);
+              setNavigationTab('project-detail');
+            }}
+            onNavigateToCosts={() => {
+              setNavigationTab('costs');
+            }}
+          />
 
       {/* Main High Density 12-Col Dashboard Grid */}
       <div className="grid grid-cols-12 gap-4">
@@ -429,6 +558,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
         </div>
 
       </div>
+    </div>
+  )}
 
     </div>
   );
