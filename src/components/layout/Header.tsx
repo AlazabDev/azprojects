@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuthContext } from '../../context/AuthContext';
+import { SyncModal } from '../modals/SyncModal';
 import { 
   Bell, 
   Search, 
@@ -23,7 +24,8 @@ import {
   X,
   CheckSquare,
   Camera,
-  ShieldCheck
+  ShieldCheck,
+  RefreshCw
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -65,6 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showAppsGrid, setShowAppsGrid] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
 
   // Notification items matching architectural / construction operations
   const [projectNotifications, setProjectNotifications] = useState<ProjectNotification[]>([
@@ -203,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Brand Logo & Name: AzProjects / مؤسسة العزب لإدارة المشاريع المعمارية */}
+        {/* Brand Logo & Name: AzProjects / لوحة التحكم المركزية */}
         <div 
           onClick={() => setNavigationTab('dashboard')}
           className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group"
@@ -215,17 +218,11 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex flex-col text-right">
-            <div className="flex items-center gap-2">
-              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                AzProjects
-              </span>
-              <span className="hidden md:inline-block text-slate-300 dark:text-slate-700 font-normal">|</span>
-              <span className="hidden md:inline-block text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                لوحة التحكم المركزية
-              </span>
-            </div>
+            <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              AzProjects
+            </span>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-none mt-0.5">
-              مؤسسة العزب لإدارة المشاريع المعمارية
+              لوحة التحكم المركزية
             </span>
           </div>
         </div>
@@ -376,8 +373,19 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* 3. Left Side (RTL End): Notification Bell, Apps Grid & User Profile Trigger */}
-      <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
+      {/* 3. Left Side (RTL End): Notification Bell, Apps Grid, Sync & User Profile Trigger */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+
+        {/* 3.0 Live Sync Trigger Button with Daftra & MagicPlan */}
+        <button
+          onClick={() => setShowSyncModal(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-850 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+          title="التزامن الفعلي مع دفترة و MagicPlan"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">مزامنة دفترة & ماجيك بلان</span>
+          <span className="md:hidden inline">مزامنة</span>
+        </button>
 
         {/* 3.1 Notifications Bell with Red Badge "50" (matching Image 5 & 4) */}
         <div ref={notificationsRef} className="relative">
@@ -620,6 +628,14 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
       </div>
+
+      {/* Real-time Daftra & MagicPlan Live Sync Modal */}
+      {showSyncModal && (
+        <SyncModal
+          isOpen={showSyncModal}
+          onClose={() => setShowSyncModal(false)}
+        />
+      )}
 
     </header>
   );

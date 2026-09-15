@@ -425,12 +425,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* Footer info (when expanded) */}
-        {!isCollapsed && (
-          <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-400 text-center shrink-0">
-            AzProjects v2.5 • مؤسسة العزب
-          </div>
-        )}
+        {/* Sync trigger button & Footer info */}
+        <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 shrink-0 space-y-2">
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+              isSyncing 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' 
+                : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-800'
+            }`}
+            title="تزامن فعلي مع دفترة و MagicPlan"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+            {!isCollapsed && (
+              <span className="truncate">
+                {isSyncing ? 'جاري المزامنة...' : 'مزامنة دفترة & ماجيك بلان'}
+              </span>
+            )}
+          </button>
+
+          {!isCollapsed && (
+            <div className="text-[11px] text-slate-400 text-center">
+              AzProjects v2.5 • مؤسسة العزب
+            </div>
+          )}
+        </div>
 
       </aside>
     </>
