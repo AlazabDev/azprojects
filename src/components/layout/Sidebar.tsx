@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp, getRoleLabel } from '../../context/AppContext';
 import { useAuthContext } from '../../context/AuthContext';
 import { 
   LayoutDashboard,
   Building2,
+  HardHat,
   ShieldCheck,
   Layers,
   CheckSquare,
@@ -18,6 +19,9 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Camera,
+  RefreshCw,
   X
 } from 'lucide-react';
 
@@ -26,6 +30,8 @@ interface SidebarProps {
   onCloseMobile: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onOpenNewProject?: () => void;
+  onOpenGallery?: () => void;
 }
 
 interface NavItem {
@@ -41,16 +47,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen, 
   onCloseMobile,
   isCollapsed = false,
-  onToggleCollapse 
+  onToggleCollapse,
+  onOpenNewProject,
+  onOpenGallery
 }) => {
   const { 
     navigationTab, 
     setNavigationTab, 
     projects,
+    selectedProjectId,
+    setSelectedProjectId,
+    selectedProject,
     tasks,
     whatsAppMessages,
-    activeRole
+    activeRole,
+    syncWithDaftra,
+    syncWithMagicPlan
   } = useApp();
+
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await Promise.all([syncWithDaftra(), syncWithMagicPlan()]);
+    } catch (e) {
+      console.warn('Sync error:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const { user: authUser } = useAuthContext();
 
@@ -70,6 +96,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'المشاريع المعمارية',
       icon: Building2,
       badge: projects.length > 0 ? projects.length : undefined
+    },
+    {
+      id: 'engineers-hub',
+      label: 'لوحة تحكم المهندسين',
+      icon: HardHat,
+      badge: 'SBC & دفترة',
+      badgeColor: 'bg-indigo-500/20 text-indigo-400 border border-indigo-400/30'
     },
     {
       id: 'client-governance',
@@ -185,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {onToggleCollapse && (
                 <button 
                   onClick={onToggleCollapse}
-                  className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                   title="توسيع القائمة (إظهار الأسماء بجوار الأيقونات)"
                 >
                   <ChevronLeft className="w-4.5 h-4.5" />
@@ -194,6 +227,104 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
+        </div>
+
+        {/* Transferred Actions from Header into Sidebar */}
+        <div className={`border-b border-slate-200/80 dark:border-slate-800 shrink-0 ${isCollapsed ? 'p-2 space-y-2' : 'p-3 space-y-2.5 bg-slate-50/50 dark:bg-slate-850/40'}`}>
+          {!isCollapsed ? (
+            <>
+              {/* Prominent New Project Action Button */}
+              {onOpenNewProject && (
+                <button
+                  onClick={onOpenNewProject}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>مشروع جديد</span>
+                </button>
+              )}
+
+              {/* Quick Actions Row: Gallery & Global Sync */}
+              <div className="grid grid-cols-2 gap-1.5">
+                {onOpenGallery && (
+                  <button
+                    onClick={onOpenGallery}
+                    className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-semibold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                    title="معرض المخططات والصور 2D/3D"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span className="truncate">المعرض</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                  className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-semibold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                  title="مزامنة شاملة مع دفترة و MagicPlan"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span className="truncate">{isSyncing ? 'مزامنة...' : 'مزامنة'}</span>
+                </button>
+              </div>
+
+              {/* Active Project Switcher */}
+              <div className="pt-0.5">
+                <div className="flex items-center justify-between mb-1 px-1">
+                  <span className="text-[10px] font-bold text-slate-400">المشروع النشط</span>
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                    {selectedProject?.progress || 0}% إنجاز
+                  </span>
+                </div>
+                <div className="relative flex items-center bg-white dark:bg-slate-800 rounded-xl px-2.5 py-1.5 border border-slate-200 dark:border-slate-700">
+                  <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 ml-1.5" />
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className="w-full bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none cursor-pointer pr-0.5"
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium">
+                        {p.name} ({p.progress}%)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Collapsed Quick Action Icons */
+            <div className="flex flex-col items-center gap-1.5">
+              {onOpenNewProject && (
+                <button
+                  onClick={onOpenNewProject}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                  title="مشروع جديد"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              )}
+
+              {onOpenGallery && (
+                <button
+                  onClick={onOpenGallery}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                  title="المعرض و MagicPlan"
+                >
+                  <Camera className="w-4 h-4 text-blue-500" />
+                </button>
+              )}
+
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                title="مزامنة مع دفترة و MagicPlan"
+              >
+                <RefreshCw className={`w-4 h-4 text-emerald-500 ${isSyncing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Navigation Items List */}

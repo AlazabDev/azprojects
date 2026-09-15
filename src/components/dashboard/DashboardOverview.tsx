@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CostAnalysisChart } from './CostAnalysisChart';
 import { ArchitecturalDocumentsTab } from './ArchitecturalDocumentsTab';
+import { Dashboard } from './Dashboard';
 import { 
   Building2, 
   TrendingUp, 
@@ -16,6 +17,7 @@ import {
   Sparkles, 
   Plus, 
   Compass,
+  HardHat,
   FileDown,
   Bell,
   ChevronLeft,
@@ -23,12 +25,13 @@ import {
   RefreshCw,
   FileText,
   Download,
-  Eye
+  Eye,
+  BarChart2
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
   onOpenNewProject: () => void;
-  initialTab?: 'overview' | 'architectural-docs';
+  initialTab?: 'overview' | 'projects-status' | 'architectural-docs';
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewProject, initialTab = 'overview' }) => {
@@ -47,7 +50,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
     syncWithMagicPlan 
   } = useApp();
 
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'architectural-docs'>(initialTab);
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'projects-status' | 'architectural-docs'>(initialTab);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // High-level KPI aggregations
@@ -92,6 +95,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
           </button>
 
           <button
+            onClick={() => setDashboardTab('projects-status')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              dashboardTab === 'projects-status'
+                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4 text-blue-500" />
+            <span>ملخص حالة المشاريع (Recharts)</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+              توزيع & إنجاز
+            </span>
+          </button>
+
+          <button
             onClick={() => setDashboardTab('architectural-docs')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               dashboardTab === 'architectural-docs'
@@ -103,6 +121,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
             <span>المستندات المعمارية ومخططات MagicPlan</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
               7 مخططات
+            </span>
+          </button>
+
+          <button
+            onClick={() => setNavigationTab('engineers-hub')}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer"
+            title="الانتقال إلى لوحة تحكم المهندسين المخصصة لكافة المشروعات ومراحلها"
+          >
+            <HardHat className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>لوحة تحكم المهندسين (المشروعات والمراحل)</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+              دفترة & SBC
             </span>
           </button>
         </div>
@@ -127,9 +157,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
         </div>
       </div>
 
-      {/* Conditionally Render Architectural Documents Tab OR Full Dashboard Overview */}
+      {/* Conditionally Render Tabs */}
       {dashboardTab === 'architectural-docs' ? (
         <ArchitecturalDocumentsTab />
+      ) : dashboardTab === 'projects-status' ? (
+        <Dashboard onOpenNewProject={onOpenNewProject} />
       ) : (
         <div className="space-y-4">
           
@@ -261,6 +293,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
             </div>
 
           </div>
+
+          {/* RECHARTS INTEGRATION: Visual Summary of Projects Status & Progress */}
+          <Dashboard onOpenNewProject={onOpenNewProject} />
 
           {/* RECHARTS INTEGRATION: Cost Distribution & Variance vs Budget for Project Arabesque */}
           <CostAnalysisChart 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DocumentItem, DocumentType } from '../../types';
 import { GooglePickerButton } from './GooglePickerButton';
+import { GoogleDocsHub } from './GoogleDocsHub';
 import { 
   FileText, 
   UploadCloud, 
@@ -19,12 +20,15 @@ import {
   Check, 
   Share2,
   ExternalLink,
-  HardDrive
+  HardDrive,
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 
 export const DocumentManager: React.FC = () => {
   const { projectDocuments, addDocument, deleteDocument, selectedProject, projectPhases, currentUser } = useApp();
 
+  const [viewMode, setViewMode] = useState<'files' | 'google-docs'>('files');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -111,6 +115,18 @@ export const DocumentManager: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setViewMode(viewMode === 'google-docs' ? 'files' : 'google-docs')}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer ${
+              viewMode === 'google-docs'
+                ? 'bg-blue-600 text-white shadow-blue-500/20'
+                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-blue-500" />
+            <span>{viewMode === 'google-docs' ? 'العودة للمخططات' : 'مركز Google Docs'}</span>
+          </button>
+
           <GooglePickerButton />
           
           <button
@@ -123,134 +139,214 @@ export const DocumentManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="بحث بالاسم، الوسم، أو الوصف..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs pr-9 pl-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 outline-none"
-          />
-        </div>
+      {/* Primary Sub-Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <button
+          onClick={() => setViewMode('files')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+            viewMode === 'files'
+              ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200 dark:border-slate-700'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Folder className="w-4 h-4" />
+          <span>المستندات والمخططات الهندسية</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono">
+            {projectDocuments.length}
+          </span>
+        </button>
 
-        <div className="flex items-center gap-2">
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 outline-none cursor-pointer"
-          >
-            <option value="all">جميع التصنيفات</option>
-            <option value="blueprint">مخططات CAD وتصاميم</option>
-            <option value="permit">رخص بناء وتراخيص</option>
-            <option value="contract">عقود واتفاقيات</option>
-            <option value="invoice">فواتير ومستخلصات</option>
-            <option value="report">تقارير فحص</option>
-            <option value="photo">صور الموقع</option>
-          </select>
-        </div>
+        <button
+          onClick={() => setViewMode('google-docs')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+            viewMode === 'google-docs'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <FileText className="w-4 h-4 text-blue-400" />
+          <span>مستندات Google Docs والعقود</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/30 text-blue-100">
+            Workspace
+          </span>
+        </button>
       </div>
 
-      {/* Documents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDocuments.map((doc) => {
-          const typeBadge = getTypeLabel(doc.documentType);
+      {viewMode === 'google-docs' ? (
+        <GoogleDocsHub />
+      ) : (
+        <>
+          {/* Filter and Search Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="بحث بالاسم، الوسم، أو الوصف..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs pr-9 pl-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 outline-none"
+              />
+            </div>
 
-          return (
-            <div
-              key={doc.id}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between gap-3 group"
-            >
-              <div className="space-y-2.5">
-                
-                {/* Header Badge & Version */}
-                <div className="flex items-center justify-between">
-                  <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${typeBadge.bg}`}>
-                    {typeBadge.label}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400 font-mono">v{doc.version}.0</span>
-                </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 outline-none cursor-pointer"
+              >
+                <option value="all">جميع التصنيفات</option>
+                <option value="blueprint">مخططات CAD وتصاميم</option>
+                <option value="permit">رخص بناء وتراخيص</option>
+                <option value="contract">عقود واتفاقيات</option>
+                <option value="invoice">فواتير ومستخلصات</option>
+                <option value="report">تقارير فحص</option>
+                <option value="photo">صور الموقع</option>
+              </select>
+            </div>
+          </div>
 
-                {/* Name & Phase */}
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition truncate" title={doc.name}>
-                    {doc.name}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                    {doc.phaseName || 'مستندات المشروع العامة'}
-                  </p>
-                </div>
+          {/* Documents Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredDocuments.map((doc) => {
+              const typeBadge = getTypeLabel(doc.documentType);
+              const isGoogleDoc = doc.fileType === 'application/vnd.google-apps.document' || doc.fileUrl?.includes('docs.google.com') || doc.tags?.includes('Google Docs');
 
-                {/* Preview Thumbnail if image */}
-                {doc.fileUrl && doc.fileUrl.startsWith('http') && (
-                  <div 
-                    onClick={() => setPreviewDoc(doc)}
-                    className="relative h-28 w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 cursor-pointer border border-slate-100 dark:border-slate-700"
-                  >
-                    <img
-                      src={doc.fileUrl}
-                      alt={doc.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
-                      <Eye className="w-5 h-5 drop-shadow" />
+              return (
+                <div
+                  key={doc.id}
+                  className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between gap-3 group"
+                >
+                  <div className="space-y-2.5">
+                    
+                    {/* Header Badge & Version */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${typeBadge.bg}`}>
+                          {typeBadge.label}
+                        </span>
+                        {isGoogleDoc && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 flex items-center gap-1">
+                            <FileText className="w-3 h-3 text-blue-600" />
+                            <span>Google Docs</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 font-mono">v{doc.version}.0</span>
+                    </div>
+
+                    {/* Name & Phase */}
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition truncate" title={doc.name}>
+                        {doc.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                        {doc.phaseName || 'مستندات المشروع العامة'}
+                      </p>
+                    </div>
+
+                    {/* Preview Thumbnail if image or Doc badge */}
+                    {doc.fileUrl && doc.fileUrl.startsWith('http') && !isGoogleDoc && (
+                      <div 
+                        onClick={() => setPreviewDoc(doc)}
+                        className="relative h-28 w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 cursor-pointer border border-slate-100 dark:border-slate-700"
+                      >
+                        <img
+                          src={doc.fileUrl}
+                          alt={doc.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                          <Eye className="w-5 h-5 drop-shadow" />
+                        </div>
+                      </div>
+                    )}
+
+                    {isGoogleDoc && (
+                      <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200">
+                          <FileText className="w-4 h-4 text-blue-600" />
+                          <span className="font-semibold text-[11px]">مستند سحابي حي في Google Docs</span>
+                        </div>
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:text-blue-800 text-[11px] font-bold flex items-center gap-0.5"
+                        >
+                          <span>فتح</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    {doc.tags && doc.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {doc.tags.map((t, idx) => (
+                          <span key={idx} className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* Footer Meta & Actions */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>{new Date(doc.uploadedAt).toLocaleDateString('ar-SA')}</span>
+                    
+                    <div className="flex items-center gap-1.5">
+                      {isGoogleDoc ? (
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                          title="فتح في Google Docs"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => setPreviewDoc(doc)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                          title="معاينة المستند"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {!isGoogleDoc && (
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          download
+                          className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
+                          title="تحميل الملف"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+
+                      <button
+                        onClick={() => deleteDocument(doc.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition"
+                        title="حذف المستند"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
-                )}
 
-                {/* Tags */}
-                {doc.tags && doc.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {doc.tags.map((t, idx) => (
-                      <span key={idx} className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-              </div>
-
-              {/* Footer Meta & Actions */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-400">
-                <span>{new Date(doc.uploadedAt).toLocaleDateString('ar-SA')}</span>
-                
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setPreviewDoc(doc)}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
-                    title="معاينة المستند"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
-
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    download
-                    className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
-                    title="تحميل الملف"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </a>
-
-                  <button
-                    onClick={() => deleteDocument(doc.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg transition"
-                    title="حذف المستند"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
                 </div>
-              </div>
-
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Document Preview Modal */}
       {previewDoc && (

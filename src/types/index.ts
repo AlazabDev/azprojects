@@ -427,6 +427,9 @@ export interface AppSettings {
   magicplanProjectId?: string;
   whatsappWebhookUrl: string;
   autoSyncDaftra: boolean;
+  autoSyncMagicPlan?: boolean;
+  daftraSyncInterval?: number;
+  magicplanSyncInterval?: number;
   autoClassifyWhatsApp: boolean;
   aiSiteInspectionsEnabled: boolean;
 }

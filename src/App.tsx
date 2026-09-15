@@ -7,6 +7,7 @@ import { Header } from './components/layout/Header';
 import { QuickMobileFab } from './components/layout/QuickMobileFab';
 import { OfflineSyncBanner } from './components/layout/OfflineSyncBanner';
 import { CreateProjectModal } from './components/projects/CreateProjectModal';
+import { ProjectGalleryModal } from './components/gallery/ProjectGalleryModal';
 import { AppRoutes } from './routes/AppRoutes';
 
 const MainAppContent: React.FC = () => {
@@ -14,6 +15,7 @@ const MainAppContent: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
 
   // If not logged in, render the Auth views cleanly
   if (!isAuthenticated) {
@@ -34,6 +36,8 @@ const MainAppContent: React.FC = () => {
           onCloseMobile={() => setIsSidebarOpen(false)}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onOpenNewProject={() => setShowCreateModal(true)}
+          onOpenGallery={() => setShowGalleryModal(true)}
         />
 
         {/* Main Content Area with Header and Scrollable Body */}
@@ -70,6 +74,13 @@ const MainAppContent: React.FC = () => {
         />
       )}
 
+      {/* Project Gallery Modal */}
+      {showGalleryModal && (
+        <ProjectGalleryModal 
+          isOpen={showGalleryModal}
+          onClose={() => setShowGalleryModal(false)} 
+        />
+      )}
     </div>
   );
 };

@@ -20,6 +20,7 @@ import { SuppliersPage } from '../pages/suppliers/SuppliersPage';
 import { NotificationsPage } from '../pages/notifications/NotificationsPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
 import { ClientGovernancePage } from '../pages/governance/ClientGovernancePage';
+import { EngineersDashboardPage } from '../pages/engineers/EngineersDashboardPage';
 
 interface AppRoutesProps {
   onOpenNewProject: () => void;
@@ -53,6 +54,11 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ onOpenNewProject }) => {
   switch (navigationTab) {
     case 'dashboard':
       return <DashboardPage onOpenNewProject={onOpenNewProject} />;
+    
+    case 'engineers-hub':
+    case 'engineers-dashboard':
+    case 'engineers':
+      return <EngineersDashboardPage />;
     
     case 'projects':
       return <ProjectsPage onOpenNewProject={onOpenNewProject} />;

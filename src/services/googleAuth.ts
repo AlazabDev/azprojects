@@ -13,14 +13,22 @@ import firebaseConfig from '../../firebase-applet-config.json';
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
-export const GOOGLE_DRIVE_SCOPES = [
+export const GOOGLE_WORKSPACE_SCOPES = [
+  'https://www.googleapis.com/auth/documents',
+  'https://www.googleapis.com/auth/documents.readonly',
+  'https://www.googleapis.com/auth/drive',
   'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/drive.metadata.readonly'
+  'https://www.googleapis.com/auth/drive.readonly'
 ];
 
+export const GOOGLE_DRIVE_SCOPES = GOOGLE_WORKSPACE_SCOPES;
+
 const provider = new GoogleAuthProvider();
-GOOGLE_DRIVE_SCOPES.forEach((scope) => {
+GOOGLE_WORKSPACE_SCOPES.forEach((scope) => {
   provider.addScope(scope);
+});
+provider.setCustomParameters({
+  prompt: 'consent'
 });
 
 // Cache the access token in-memory ONLY as mandated by security guidelines
