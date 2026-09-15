@@ -31,8 +31,12 @@ interface TabItem {
   badge?: string;
 }
 
-export const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('company');
+interface SettingsPageProps {
+  initialTab?: SettingsTabId;
+}
+
+export const SettingsPage: React.FC<SettingsPageProps> = ({ initialTab = 'integrations' }) => {
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
 
   const tabs: TabItem[] = [
     { id: 'company', title: 'الهوية والملف المؤسسي', titleEn: 'Company Profile', icon: Building2 },

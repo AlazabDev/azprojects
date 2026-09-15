@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CostAnalysisChart } from './CostAnalysisChart';
 import { ArchitecturalDocumentsTab } from './ArchitecturalDocumentsTab';
+import { IntegrationsTab } from '../settings/IntegrationsTab';
 import { Dashboard } from './Dashboard';
 import { 
   Building2, 
@@ -26,12 +27,13 @@ import {
   FileText,
   Download,
   Eye,
-  BarChart2
+  BarChart2,
+  Key
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
   onOpenNewProject: () => void;
-  initialTab?: 'overview' | 'projects-status' | 'architectural-docs';
+  initialTab?: 'overview' | 'projects-status' | 'architectural-docs' | 'integrations-settings';
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewProject, initialTab = 'overview' }) => {
@@ -50,7 +52,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
     syncWithMagicPlan 
   } = useApp();
 
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'projects-status' | 'architectural-docs'>(initialTab);
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'projects-status' | 'architectural-docs' | 'integrations-settings'>(initialTab);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // High-level KPI aggregations
@@ -125,6 +127,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
           </button>
 
           <button
+            onClick={() => setDashboardTab('integrations-settings')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              dashboardTab === 'integrations-settings'
+                ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Key className="w-4 h-4 text-emerald-500" />
+            <span>إعدادات وحالة الربط (دفترة & MagicPlan)</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+              مؤشرات حية & API
+            </span>
+          </button>
+
+          <button
             onClick={() => setNavigationTab('engineers-hub')}
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer"
             title="الانتقال إلى لوحة تحكم المهندسين المخصصة لكافة المشروعات ومراحلها"
@@ -158,12 +175,44 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onOpenNewP
       </div>
 
       {/* Conditionally Render Tabs */}
-      {dashboardTab === 'architectural-docs' ? (
+      {dashboardTab === 'integrations-settings' ? (
+        <div className="bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl p-2 sm:p-4">
+          <IntegrationsTab />
+        </div>
+      ) : dashboardTab === 'architectural-docs' ? (
         <ArchitecturalDocumentsTab />
       ) : dashboardTab === 'projects-status' ? (
         <Dashboard onOpenNewProject={onOpenNewProject} />
       ) : (
         <div className="space-y-4">
+
+          {/* Quick Integration Status & Keys Bar */}
+          <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">دفترة ERP:</span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  متصل وموثق (أمر عمل #17)
+                </span>
+              </div>
+              <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">MagicPlan Cloud:</span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                  سحابي نشط v2 (580 م²)
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setDashboardTab('integrations-settings')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 font-bold text-xs transition cursor-pointer self-start sm:self-auto"
+            >
+              <Key className="w-3.5 h-3.5 text-emerald-600" />
+              <span>إدارة وتحديث مفاتيح الـ API</span>
+            </button>
+          </div>
           
           {/* Top 4 KPI Metrics Grid (High Density) */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

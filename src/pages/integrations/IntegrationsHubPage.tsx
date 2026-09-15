@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Layers, 
@@ -10,11 +10,15 @@ import {
   ArrowLeft, 
   CheckCircle2, 
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Key,
+  Sliders
 } from 'lucide-react';
+import { IntegrationsTab } from '../../components/settings/IntegrationsTab';
 
 export const IntegrationsHubPage: React.FC = () => {
   const { setNavigationTab } = useApp();
+  const [activeSubTab, setActiveSubTab] = useState<'settings' | 'services'>('settings');
 
   const integrations = [
     {
@@ -73,52 +77,89 @@ export const IntegrationsHubPage: React.FC = () => {
     <div className="space-y-6" dir="rtl">
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-6 text-white">
-        <div className="flex items-center gap-2 mb-2">
-          <Layers className="w-5 h-5 text-emerald-400" />
-          <span className="text-xs font-semibold text-emerald-400">منظومة التكامل والربط المركزي</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Layers className="w-5 h-5 text-emerald-400" />
+              <span className="text-xs font-semibold text-emerald-400">منظومة التكامل والربط المركزي</span>
+            </div>
+            <h1 className="text-2xl font-bold">إدارة التكاملات ومفاتيح الربط السحابي (API & Integrations)</h1>
+            <p className="text-sm text-slate-300 mt-1 max-w-2xl">
+              متابعة مؤشرات الاتصال المباشرة (Status Indicators) مع دفترة وMagicPlan، وتحديث مفاتيح الـ API وفحص استجابة الخوادم بأمان.
+            </p>
+          </div>
+
+          {/* Sub Tab Switcher */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-800/90 rounded-xl border border-slate-700 self-start sm:self-auto shrink-0">
+            <button
+              onClick={() => setActiveSubTab('settings')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                activeSubTab === 'settings'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Key className="w-4 h-4" />
+              <span>إعدادات المفاتيح وحالة الاتصال</span>
+            </button>
+            <button
+              onClick={() => setActiveSubTab('services')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                activeSubTab === 'services'
+                  ? 'bg-slate-700 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Sliders className="w-4 h-4" />
+              <span>بوابات الخدمات ({integrations.length})</span>
+            </button>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold">بوابات التكامل مع الأنظمة والخدمات الخارجية</h1>
-        <p className="text-sm text-slate-300 mt-1 max-w-2xl">
-          إدارة قنوات الربط المباشرة مع دفترة للمحاسبة، وMagicPlan للمخططات، وواتساب للميدان، وبوابة دوال الحافة المعالجة.
-        </p>
       </div>
 
-      {/* Grid of integrations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {integrations.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={item.id}
-              onClick={item.action}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-tr ${item.color} text-white flex items-center justify-center shadow-md`}>
-                    <Icon className="w-6 h-6" />
+      {/* View Content */}
+      {activeSubTab === 'settings' ? (
+        <div className="space-y-4">
+          <IntegrationsTab />
+        </div>
+      ) : (
+        /* Grid of integrations */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {integrations.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.id}
+                onClick={item.action}
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-tr ${item.color} text-white flex items-center justify-center shadow-md`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${item.badgeColor}`}>
+                      {item.badge}
+                    </span>
                   </div>
-                  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${item.badgeColor}`}>
-                    {item.badge}
-                  </span>
+
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                    {item.subtitle}
+                  </p>
                 </div>
 
-                <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                  {item.title}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                  {item.subtitle}
-                </p>
+                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span>فتح لوحة التحكم</span>
+                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                </div>
               </div>
-
-              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                <span>فتح لوحة التحكم</span>
-                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
