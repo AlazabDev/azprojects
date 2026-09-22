@@ -16,22 +16,18 @@ export const ENV = {
   SUPABASE_URL: (import.meta as any).env?.VITE_SUPABASE_URL || 'https://xvtnollwvrzpdojgkcbi.supabase.co',
   SUPABASE_ANON_KEY: (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY || '',
   
-  // Daftra ERP (Read via backend proxy by default)
+  // Daftra ERP (Accessed securely via server backend /api/daftra proxy)
   DAFTRA_BASE_URL: (import.meta as any).env?.VITE_DAFTRA_BASE_URL || 'https://alazab-co.daftra.com',
   DAFTRA_SUBDOMAIN: (import.meta as any).env?.VITE_DAFTRA_SUBDOMAIN || 'alazab-co',
-  DAFTRA_API_KEY: (import.meta as any).env?.VITE_DAFTRA_API_KEY || '',
   
-  // MagicPlan Cloud
+  // MagicPlan Cloud (Accessed securely via server backend /api/magicplan proxy)
   MAGICPLAN_BASE_URL: (import.meta as any).env?.VITE_MAGICPLAN_BASE_URL || 'https://cloud.magicplan.app/api/v2',
-  MAGICPLAN_API_KEY: (import.meta as any).env?.VITE_MAGICPLAN_API_KEY || '',
-  MAGICPLAN_CUSTOMER_KEY: (import.meta as any).env?.VITE_MAGICPLAN_CUSTOMER_KEY || '',
   
-  // MinIO / Storage
+  // MinIO / Storage (Public asset endpoint and bucket)
   MINIO_ENDPOINT: (import.meta as any).env?.VITE_MINIO_ENDPOINT || 'storage.alazab.com',
   MINIO_BUCKET: (import.meta as any).env?.VITE_MINIO_BUCKET_NAME || 'azprojects-vault',
   
-  // Azure AI Foundry
-  AZURE_AI_ENDPOINT: (import.meta as any).env?.VITE_AZURE_AI_PROJECTS_ENDPOINT || 'https://az-ai-resource.services.ai.azure.com/api/projects/az-ai-gateway',
+  // Azure AI Agent Metadata
   AZURE_AI_AGENT_NAME: (import.meta as any).env?.VITE_AZURE_AI_AGENT_NAME || 'az-agent-project',
   AZURE_AI_AGENT_VERSION: (import.meta as any).env?.VITE_AZURE_AI_AGENT_VERSION || '2',
 
