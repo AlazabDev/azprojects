@@ -60,7 +60,7 @@ export const DaftraSyncHub: React.FC = () => {
 
   const [configForm, setConfigForm] = useState({
     daftraSubdomain: settings.daftraSubdomain || 'alazab-co',
-    daftraApiKey: settings.daftraApiKey || 'daf_live_alazab_co_998124018274aefb'
+    daftraApiKey: settings.daftraApiKey || ''
   });
 
   const [newInvoiceData, setNewInvoiceData] = useState({

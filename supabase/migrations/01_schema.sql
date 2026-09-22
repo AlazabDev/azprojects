@@ -4,9 +4,10 @@
 -- 01_schema.sql
 -- ============================================================================
 
--- تفعيل ملحقات بوستجرس الضرورية
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- تفعيل ملحقات بوستجرس الضرورية في المخطط المخصص extensions
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA extensions;
 
 -- ----------------------------------------------------------------------------
 -- 1. الأنواع المخصصة والتعدادات (Custom Enum Types)

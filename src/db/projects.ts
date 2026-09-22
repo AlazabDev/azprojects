@@ -5,18 +5,30 @@ import { registerOrInviteClient } from './users.ts';
 
 export interface UserContext {
   email: string;
-  role: string; // 'owner' | 'engineer' | 'client' | 'accountant'
+  role: string; // 'owner' | 'project_manager' | 'architect' | 'civil_engineer' | 'contractor' | 'consultant' | 'client'
   uid?: string;
 }
 
+const ELEVATED_ROLES = [
+  'owner',
+  'project_manager',
+  'architect',
+  'civil_engineer',
+  'contractor',
+  'consultant',
+  'admin',
+  'engineer',
+  'accountant',
+];
+
 /**
  * Enforce Row-Level Security (RLS) based on User Role:
- * - 'owner', 'engineer', 'accountant': Can view ALL projects and complete site data.
+ * - Elevated roles (owner, project_manager, architect, etc.): Can view projects.
  * - 'client' (Project Owner): Strictly restricted to their OWN project(s) matching clientEmail.
  */
 export async function getProjectsForUser(user: UserContext) {
   try {
-    const isElevatedRole = ['owner', 'engineer', 'accountant', 'admin'].includes(user.role);
+    const isElevatedRole = ELEVATED_ROLES.includes(user.role);
 
     if (isElevatedRole) {
       // Engineers & Managers see all projects across the company
@@ -41,7 +53,7 @@ export async function getProjectsForUser(user: UserContext) {
  */
 export async function getProjectByIdForUser(projectId: number, user: UserContext) {
   try {
-    const isElevatedRole = ['owner', 'engineer', 'accountant', 'admin'].includes(user.role);
+    const isElevatedRole = ELEVATED_ROLES.includes(user.role);
 
     const result = await db
       .select()

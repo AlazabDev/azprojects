@@ -58,8 +58,8 @@ export const MagicPlanViewer: React.FC = () => {
   });
 
   const [configForm, setConfigForm] = useState({
-    magicplanApiKey: settings.magicplanApiKey || 'mp_live_c10a4e7492c81e9f45a08912',
-    magicplanCustomerKey: settings.magicplanCustomerKey || 'mp_cust_alazab_co_saudi_2026'
+    magicplanApiKey: settings.magicplanApiKey || '',
+    magicplanCustomerKey: settings.magicplanCustomerKey || ''
   });
 
   const activeFloor = magicPlanDesign.floors[selectedFloorIndex] || magicPlanDesign.floors[0];

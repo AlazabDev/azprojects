@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuthContext } from '../../context/AuthContext';
-import { Building2, Lock, Mail, ShieldCheck, ArrowLeft, Eye, EyeOff, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Building2, Lock, Mail, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 interface LoginPageProps {
   onSuccess?: () => void;
@@ -9,25 +9,14 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onSwitchToRegister }) => {
   const { login, isLoading, error } = useAuthContext();
-  const [email, setEmail] = useState('alazab.contract@gmail.com');
-  const [password, setPassword] = useState('AzProjects@2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const success = await login({ email, password, rememberMe });
-    if (success && onSuccess) {
-      onSuccess();
-    }
-  };
-
-  const handleQuickDemoLogin = async (demoRole: 'owner' | 'architect' | 'manager') => {
-    let demoEmail = 'alazab.contract@gmail.com';
-    if (demoRole === 'architect') demoEmail = 'architect@alazab.com';
-    if (demoRole === 'manager') demoEmail = 'pm@alazab.com';
-    setEmail(demoEmail);
-    const success = await login({ email: demoEmail, password: 'demoPassword123' });
     if (success && onSuccess) {
       onSuccess();
     }
@@ -127,36 +116,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onSwitchToRegis
             )}
           </button>
         </form>
-
-        {/* Quick Demo Selector */}
-        <div className="mt-6 pt-5 border-t border-slate-700/60">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-medium text-slate-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              <span>دخول تجريبي سريع بالصلاحيات:</span>
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => handleQuickDemoLogin('owner')}
-              className="px-2 py-1.5 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg text-[11px] text-slate-200 transition-colors"
-            >
-              المالك / المدير
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('architect')}
-              className="px-2 py-1.5 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg text-[11px] text-slate-200 transition-colors"
-            >
-              مهندس معماري
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('manager')}
-              className="px-2 py-1.5 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-lg text-[11px] text-slate-200 transition-colors"
-            >
-              مدير مشروع
-            </button>
-          </div>
-        </div>
 
         {onSwitchToRegister && (
           <div className="mt-5 text-center text-xs text-slate-400">

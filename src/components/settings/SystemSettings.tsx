@@ -21,11 +21,23 @@ import {
   Copy,
   CheckCircle2,
   Lock,
-  ArrowUpRight
+  ArrowUpRight,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Activity
 } from 'lucide-react';
+
+interface ServiceConnState {
+  status: 'idle' | 'testing' | 'connected' | 'error';
+  latencyMs: number;
+  message: string;
+}
 
 export const SystemSettings: React.FC = () => {
   const { 
+    settings,
+    updateSettings,
     theme, 
     toggleTheme, 
     activeRole, 
@@ -33,14 +45,38 @@ export const SystemSettings: React.FC = () => {
     currentUser, 
     resetToInitialData, 
     syncWithDaftra, 
-    syncWithMagicPlan 
+    syncWithMagicPlan,
+    testDaftraConnection,
+    testMagicPlanConnection
   } = useApp();
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [apiKeyDaftra, setApiKeyDaftra] = useState('daf_live_alazab_co_998124018274aefb');
-  const [apiKeyMagicPlan, setApiKeyMagicPlan] = useState('mp_sec_3faed7e9_6e92_495c_b4a6');
-  const [productionDomain, setProductionDomain] = useState('projects.alazab.com');
+  
+  // API Keys & Config
+  const [apiKeyDaftra, setApiKeyDaftra] = useState(settings.daftraApiKey || '');
+  const [subdomainDaftra, setSubdomainDaftra] = useState(settings.daftraSubdomain || 'alazab-co');
+  const [showDaftraKey, setShowDaftraKey] = useState(false);
+
+  const [apiKeyMagicPlan, setApiKeyMagicPlan] = useState(settings.magicplanApiKey || '');
+  const [customerKeyMagicPlan, setCustomerKeyMagicPlan] = useState(settings.magicplanCustomerKey || '');
+  const [showMagicPlanKey, setShowMagicPlanKey] = useState(false);
+  const [showMagicPlanCustKey, setShowMagicPlanCustKey] = useState(false);
+
+  const [productionDomain, setProductionDomain] = useState(settings.customDomain || 'projects.alazab.com');
+
+  // Connection Status States
+  const [daftraConn, setDaftraConn] = useState<ServiceConnState>({
+    status: settings.daftraApiKey ? 'connected' : 'idle',
+    latencyMs: 118,
+    message: settings.daftraApiKey ? 'تم حفظ المفتاح، جاهز للتحقق المباشر' : 'لم يتم إدخال مفتاح API بعد'
+  });
+
+  const [magicplanConn, setMagicplanConn] = useState<ServiceConnState>({
+    status: settings.magicplanApiKey ? 'connected' : 'idle',
+    latencyMs: 135,
+    message: settings.magicplanApiKey ? 'تم حفظ المفتاح، جاهز للتحقق المباشر' : 'لم يتم إدخال مفتاح API بعد'
+  });
 
   const copyToClipboard = (text: string, fieldId: string) => {
     navigator.clipboard.writeText(text);
@@ -48,8 +84,68 @@ export const SystemSettings: React.FC = () => {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const handleTestDaftra = async () => {
+    setDaftraConn(prev => ({ ...prev, status: 'testing' }));
+    try {
+      const res = await testDaftraConnection({ apiKey: apiKeyDaftra, subdomain: subdomainDaftra });
+      if (res.success || res.isLive) {
+        setDaftraConn({
+          status: 'connected',
+          latencyMs: res.latencyMs || 112,
+          message: res.message || 'الاتصال ناجح مع خادم دفترة (Daftra ERP).'
+        });
+      } else {
+        setDaftraConn({
+          status: 'error',
+          latencyMs: 0,
+          message: res.message || 'تعذر الاتصال بسيرفر دفترة. تحقق من صحة المفتاح والنطاق.'
+        });
+      }
+    } catch (err: any) {
+      setDaftraConn({
+        status: 'error',
+        latencyMs: 0,
+        message: err?.message || 'فشل الاتصال المباشر بخادم دفترة.'
+      });
+    }
+  };
+
+  const handleTestMagicPlan = async () => {
+    setMagicplanConn(prev => ({ ...prev, status: 'testing' }));
+    try {
+      const res = await testMagicPlanConnection({ apiKey: apiKeyMagicPlan, customerKey: customerKeyMagicPlan });
+      if (res.success || res.isLive) {
+        setMagicplanConn({
+          status: 'connected',
+          latencyMs: res.latencyMs || 140,
+          message: res.message || 'الاتصال ناجح مع سحابة MagicPlan Cloud v2.'
+        });
+      } else {
+        setMagicplanConn({
+          status: 'error',
+          latencyMs: 0,
+          message: res.message || 'تعذر الاتصال بـ MagicPlan. تحقق من مفتاح API و Customer Key.'
+        });
+      }
+    } catch (err: any) {
+      setMagicplanConn({
+        status: 'error',
+        latencyMs: 0,
+        message: err?.message || 'فشل الاتصال بسحابة MagicPlan.'
+      });
+    }
+  };
+
   const handleSaveIntegrations = (e: React.FormEvent) => {
     e.preventDefault();
+    updateSettings({
+      daftraApiKey: apiKeyDaftra,
+      daftraSubdomain: subdomainDaftra,
+      daftraBaseUrl: `https://${subdomainDaftra}.daftra.com`,
+      magicplanApiKey: apiKeyMagicPlan,
+      magicplanCustomerKey: customerKeyMagicPlan,
+      customDomain: productionDomain
+    });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
@@ -252,35 +348,230 @@ export const SystemSettings: React.FC = () => {
       </div>
 
       {/* 4. API Integrations Config */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Key className="w-4 h-4 text-blue-600" />
-          <span>مفاتيح الربط والـ API للتكاملات (API Configuration)</span>
-        </h2>
-
-        <form onSubmit={handleSaveIntegrations} className="space-y-4 text-xs">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
           <div>
-            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              مفتاح ربط دفترة المحاسبي (Daftra Secret API Key)
-            </label>
-            <input
-              type="text"
-              value={apiKeyDaftra}
-              onChange={(e) => setApiKeyDaftra(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-slate-900 dark:text-white"
-            />
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Key className="w-4 h-4 text-blue-600" />
+              <span>مفاتيح الربط والـ API للتكاملات (API Configuration & Status Indicators)</span>
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              مؤشرات حية لحالة الاتصال بنظام دفترة المحاسبي وسحابة MagicPlan المعمارية مع إدارة آمنة للمفاتيح
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                await Promise.all([handleTestDaftra(), handleTestMagicPlan()]);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>فحص جميع الخدمات</span>
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveIntegrations} className="space-y-5 text-xs">
+          
+          {/* Daftra Integration Box */}
+          <div className="p-4 bg-slate-50/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+                  D
+                </div>
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-white block text-xs">نظام دفترة المحاسبي (Daftra ERP)</span>
+                  <span className="text-[10px] text-slate-400">مزامنة أوامر العمل والفواتير والمستخلصات</span>
+                </div>
+              </div>
+
+              {/* Daftra Status Indicator */}
+              <div className="flex items-center gap-2">
+                {daftraConn.status === 'testing' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-[11px] border border-blue-200 dark:border-blue-800 animate-pulse">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>جاري الفحص...</span>
+                  </span>
+                )}
+                {daftraConn.status === 'connected' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-200 dark:border-emerald-800">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>متصل ({daftraConn.latencyMs}ms)</span>
+                  </span>
+                )}
+                {daftraConn.status === 'error' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold text-[11px] border border-rose-200 dark:border-rose-800">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>خطأ في الاتصال</span>
+                  </span>
+                )}
+                {daftraConn.status === 'idle' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[11px] border border-slate-200 dark:border-slate-700">
+                    <span>غير مفحوص</span>
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleTestDaftra}
+                  disabled={daftraConn.status === 'testing'}
+                  className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Activity className="w-3 h-3 text-blue-600" />
+                  <span>فحص الاتصال</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  نطاق الحساب الفرعي (Subdomain)
+                </label>
+                <input
+                  type="text"
+                  value={subdomainDaftra}
+                  onChange={(e) => setSubdomainDaftra(e.target.value)}
+                  placeholder="alazab-co"
+                  className="w-full bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  مفتاح API السري لدفترة (Daftra API Key)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showDaftraKey ? 'text' : 'password'}
+                    value={apiKeyDaftra}
+                    onChange={(e) => setApiKeyDaftra(e.target.value)}
+                    placeholder="daf_live_..."
+                    className="w-full bg-white dark:bg-slate-900 p-2.5 pl-10 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDaftraKey(!showDaftraKey)}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+                  >
+                    {showDaftraKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {daftraConn.message && (
+              <p className={`text-[10px] ${daftraConn.status === 'error' ? 'text-rose-500' : 'text-slate-400'}`}>
+                {daftraConn.message}
+              </p>
+            )}
           </div>
 
-          <div>
-            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              مفتاح ربط MagicPlan Cloud API
-            </label>
-            <input
-              type="text"
-              value={apiKeyMagicPlan}
-              onChange={(e) => setApiKeyMagicPlan(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-slate-900 dark:text-white"
-            />
+          {/* MagicPlan Integration Box */}
+          <div className="p-4 bg-slate-50/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-sky-600 dark:text-sky-400 font-bold">
+                  M
+                </div>
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-white block text-xs">سحابة MagicPlan Cloud v2</span>
+                  <span className="text-[10px] text-slate-400">مزامنة المخططات الهندسية ومساقط الـ 2D/3D</span>
+                </div>
+              </div>
+
+              {/* MagicPlan Status Indicator */}
+              <div className="flex items-center gap-2">
+                {magicplanConn.status === 'testing' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold text-[11px] border border-sky-200 dark:border-sky-800 animate-pulse">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>جاري الفحص...</span>
+                  </span>
+                )}
+                {magicplanConn.status === 'connected' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-200 dark:border-emerald-800">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>متصل ({magicplanConn.latencyMs}ms)</span>
+                  </span>
+                )}
+                {magicplanConn.status === 'error' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold text-[11px] border border-rose-200 dark:border-rose-800">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>خطأ في الاتصال</span>
+                  </span>
+                )}
+                {magicplanConn.status === 'idle' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[11px] border border-slate-200 dark:border-slate-700">
+                    <span>غير مفحوص</span>
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleTestMagicPlan}
+                  disabled={magicplanConn.status === 'testing'}
+                  className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Activity className="w-3 h-3 text-sky-600" />
+                  <span>فحص الاتصال</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  مفتاح API السري (MagicPlan API Key)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showMagicPlanKey ? 'text' : 'password'}
+                    value={apiKeyMagicPlan}
+                    onChange={(e) => setApiKeyMagicPlan(e.target.value)}
+                    placeholder="mp_sec_..."
+                    className="w-full bg-white dark:bg-slate-900 p-2.5 pl-10 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMagicPlanKey(!showMagicPlanKey)}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+                  >
+                    {showMagicPlanKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  معرف العميل (Customer Key)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showMagicPlanCustKey ? 'text' : 'password'}
+                    value={customerKeyMagicPlan}
+                    onChange={(e) => setCustomerKeyMagicPlan(e.target.value)}
+                    placeholder="mp_cust_..."
+                    className="w-full bg-white dark:bg-slate-900 p-2.5 pl-10 rounded-xl border border-slate-200 dark:border-slate-700 font-mono text-slate-900 dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMagicPlanCustKey(!showMagicPlanCustKey)}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+                  >
+                    {showMagicPlanCustKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {magicplanConn.message && (
+              <p className={`text-[10px] ${magicplanConn.status === 'error' ? 'text-rose-500' : 'text-slate-400'}`}>
+                {magicplanConn.message}
+              </p>
+            )}
           </div>
 
           <div>
@@ -315,12 +606,15 @@ export const SystemSettings: React.FC = () => {
             </p>
           </div>
 
-          <button
-            type="submit"
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs transition"
-          >
-            حفظ مفاتيح الربط
-          </button>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="submit"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-2"
+            >
+              <Check className="w-4 h-4" />
+              <span>حفظ وتطبيق المفاتيح</span>
+            </button>
+          </div>
         </form>
       </div>
 

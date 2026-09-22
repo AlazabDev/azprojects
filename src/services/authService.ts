@@ -1,145 +1,92 @@
 /**
  * AzProjects - Supabase Authentication Service
- * إدارة المصادقة، تسجيل الدخول، إنشاء الحسابات، والصلاحيات
+ * إدارة المصادقة الحقيقية عبر Supabase Auth حصراً دون أي Fallback وهمي
  */
 import { supabase } from '../lib/supabase';
 import { AuthUser, LoginCredentials, RegisterCredentials } from '../types/auth';
-import { UserRole } from '../types';
-
-const DEFAULT_ADMIN_USER: AuthUser = {
-  id: 'usr-admin-01',
-  email: 'alazab.contract@gmail.com',
-  name: 'م. أحمد العزب',
-  phone: '+966 50 123 4567',
-  role: 'owner',
-  companyName: 'مؤسسة العزب للمقاولات والديكور',
-  licenseNumber: 'CR-101089234',
-  permissions: {
-    canCreateProjects: true,
-    canEditProjects: true,
-    canDeleteProjects: true,
-    canManageBudget: true,
-    canApproveCosts: true,
-    canAssignTasks: true,
-    canSyncDaftra: true,
-    canSyncMagicPlan: true,
-    canTriggerAIAgents: true,
-  },
-};
+import { UserRole } from '../types/permissions';
 
 export class AuthService {
   /**
-   * Get Current Session User
+   * Get Current Session User from verified Supabase session
    */
   static async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        return this.mapSupabaseUserToAuthUser(session.user);
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error || !session?.user) {
+        return null;
       }
+      return this.mapSupabaseUserToAuthUser(session.user);
     } catch (err) {
-      console.warn('Error fetching Supabase session, using cached profile:', err);
+      console.warn('Error fetching Supabase session:', err);
+      return null;
     }
-
-    // Check local storage for simulated/offline session
-    const cached = localStorage.getItem('az_auth_user');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch {
-        // ignore
-      }
-    }
-
-    return DEFAULT_ADMIN_USER;
   }
 
   /**
-   * Sign In with Email and Password
+   * Sign In with Email and Password strictly via Supabase Auth
    */
   static async signIn(credentials: LoginCredentials): Promise<{ user: AuthUser | null; error: string | null }> {
     try {
-      if (credentials.password) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: credentials.email,
-          password: credentials.password,
-        });
-
-        if (error) {
-          // If in dev environment or test user, provide smart fallback for smooth preview
-          if (credentials.email.includes('alazab') || credentials.email === 'admin@alazab.com') {
-            const user = { ...DEFAULT_ADMIN_USER, email: credentials.email };
-            localStorage.setItem('az_auth_user', JSON.stringify(user));
-            return { user, error: null };
-          }
-          return { user: null, error: error.message };
-        }
-
-        if (data.user) {
-          const user = this.mapSupabaseUserToAuthUser(data.user);
-          localStorage.setItem('az_auth_user', JSON.stringify(user));
-          return { user, error: null };
-        }
+      if (!credentials.email || !credentials.password) {
+        return { user: null, error: 'البريد الإلكتروني وكلمة المرور مطلوبان.' };
       }
 
-      // Offline / Quick login fallback
-      const user: AuthUser = {
-        ...DEFAULT_ADMIN_USER,
-        email: credentials.email || DEFAULT_ADMIN_USER.email,
-      };
-      localStorage.setItem('az_auth_user', JSON.stringify(user));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email.trim(),
+        password: credentials.password,
+      });
+
+      if (error) {
+        return { user: null, error: error.message || 'فشل تسجيل الدخول. يرجى التحقق من البيانات.' };
+      }
+
+      if (!data.user) {
+        return { user: null, error: 'لم يتم العثور على بيانات المستخدم.' };
+      }
+
+      const user = this.mapSupabaseUserToAuthUser(data.user);
       return { user, error: null };
     } catch (err: any) {
-      return { user: null, error: err.message || 'فشل تسجيل الدخول' };
+      return { user: null, error: err.message || 'حدث خطأ غير متوقع أثناء تسجيل الدخول.' };
     }
   }
 
   /**
-   * Register a new user
+   * Register a new user strictly via Supabase Auth
    */
   static async signUp(credentials: RegisterCredentials): Promise<{ user: AuthUser | null; error: string | null }> {
     try {
-      if (credentials.password) {
-        const { data, error } = await supabase.auth.signUp({
-          email: credentials.email,
-          password: credentials.password,
-          options: {
-            data: {
-              name: credentials.name,
-              role: credentials.role,
-              phone: credentials.phone,
-              companyName: credentials.companyName,
-              licenseNumber: credentials.licenseNumber,
-            },
-          },
-        });
-
-        if (error) {
-          return { user: null, error: error.message };
-        }
-
-        if (data.user) {
-          const user = this.mapSupabaseUserToAuthUser(data.user, credentials.role);
-          localStorage.setItem('az_auth_user', JSON.stringify(user));
-          return { user, error: null };
-        }
+      if (!credentials.email || !credentials.password) {
+        return { user: null, error: 'البريد الإلكتروني وكلمة المرور مطلوبان.' };
       }
 
-      const user: AuthUser = {
-        id: `usr_${Date.now()}`,
-        email: credentials.email,
-        name: credentials.name,
-        phone: credentials.phone,
-        role: credentials.role || 'architect',
-        companyName: credentials.companyName,
-        licenseNumber: credentials.licenseNumber,
-        permissions: this.getPermissionsForRole(credentials.role),
-      };
+      const { data, error } = await supabase.auth.signUp({
+        email: credentials.email.trim(),
+        password: credentials.password,
+        options: {
+          data: {
+            name: credentials.name,
+            role: credentials.role || 'client',
+            phone: credentials.phone,
+            companyName: credentials.companyName,
+            licenseNumber: credentials.licenseNumber,
+          },
+        },
+      });
 
-      localStorage.setItem('az_auth_user', JSON.stringify(user));
+      if (error) {
+        return { user: null, error: error.message || 'فشل إنشاء الحساب.' };
+      }
+
+      if (!data.user) {
+        return { user: null, error: 'لم يتم إنشاء المستخدم بشكل صحيح.' };
+      }
+
+      const user = this.mapSupabaseUserToAuthUser(data.user, credentials.role);
       return { user, error: null };
     } catch (err: any) {
-      return { user: null, error: err.message || 'فشل إنشاء الحساب' };
+      return { user: null, error: err.message || 'حدث خطأ أثناء إنشاء الحساب.' };
     }
   }
 
@@ -152,13 +99,13 @@ export class AuthService {
     } catch (err) {
       console.warn('Sign out error:', err);
     }
-    localStorage.removeItem('az_auth_user');
   }
 
   /**
-   * Helper to map Supabase auth user to AuthUser
+   * Map Supabase auth user to AuthUser format
+   * Fallback role is strictly 'client' (never 'owner' or 'admin')
    */
-  private static mapSupabaseUserToAuthUser(user: any, fallbackRole: UserRole = 'owner'): AuthUser {
+  private static mapSupabaseUserToAuthUser(user: any, fallbackRole: UserRole = 'client'): AuthUser {
     const meta = user.user_metadata || {};
     const role: UserRole = meta.role || fallbackRole;
 
@@ -171,14 +118,14 @@ export class AuthService {
       companyName: meta.companyName || 'مؤسسة العزب للمقاولات',
       licenseNumber: meta.licenseNumber || '',
       lastLoginAt: user.last_sign_in_at || new Date().toISOString(),
-      permissions: this.getPermissionsForRole(role),
+      permissions: this.getLegacyPermissionsForRole(role),
     };
   }
 
   /**
-   * Role-based permissions matrix
+   * Backward-compatible permissions helper
    */
-  static getPermissionsForRole(role: UserRole) {
+  static getLegacyPermissionsForRole(role: UserRole) {
     const isOwner = role === 'owner';
     const isManager = role === 'project_manager' || isOwner;
     const isEngineer = role === 'architect' || role === 'civil_engineer' || isManager;

@@ -1,16 +1,18 @@
 import express from "express";
 import path from "path";
+import dotenv from "dotenv";
+dotenv.config();
+
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { DefaultAzureCredential } from "@azure/identity";
 import { AIProjectClient } from "@azure/ai-projects";
-import dotenv from "dotenv";
 import { getProjectsForUser, getProjectByIdForUser, syncProjectsFromIntegrations, addFieldUpdate } from "./src/db/projects.ts";
 import { getAllUsers, getOrCreateUser, registerOrInviteClient } from "./src/db/users.ts";
 import { seedInitialProjectsAndClients } from "./src/db/seed.ts";
-import { optionalAuth, requireAuth, AuthRequest } from "./src/middleware/auth.ts";
+import { optionalAuth, requireAuth, requireRole, requirePermission, AuthRequest } from "./src/middleware/auth.ts";
+import { supabaseServer } from "./src/lib/supabaseServer.ts";
 
-dotenv.config();
 
 const app = express();
 const PORT = 3000;
@@ -59,14 +61,70 @@ function getGeminiClient() {
   });
 }
 
-// 1. Health & Domain Info Endpoints
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "ok",
-    app: "AzProjects Architectural System",
+// 1. Comprehensive Health Check Endpoint
+app.get("/api/health", async (req, res) => {
+  const startTime = Date.now();
+  const checks: Record<string, any> = {};
+  let isDegraded = false;
+
+  // 1. Supabase / Database Check
+  try {
+    const dbStart = Date.now();
+    const { error: dbError } = await supabaseServer.from("projects").select("id", { count: "exact", head: true });
+    const dbLatency = Date.now() - dbStart;
+    if (dbError) {
+      checks.database = { status: "degraded", latencyMs: dbLatency, message: dbError.message };
+      isDegraded = true;
+    } else {
+      checks.database = { status: "operational", latencyMs: dbLatency };
+    }
+  } catch (err: any) {
+    checks.database = { status: "unhealthy", error: err.message };
+    isDegraded = true;
+  }
+
+  // 2. Auth Provider Check
+  checks.auth = {
+    provider: "supabase",
+    status: process.env.SUPABASE_URL ? "operational" : "unconfigured",
+  };
+
+  // 3. Daftra ERP Integration Config Check
+  const hasDaftraKey = !!process.env.DAFTRA_API_KEY;
+  checks.daftra = {
+    subdomain: process.env.DAFTRA_SUBDOMAIN || "alazab-co",
+    status: hasDaftraKey ? "configured" : "unconfigured",
+  };
+
+  // 4. MagicPlan Cloud API Config Check
+  const hasMagicPlan = !!(process.env.MAGICPLAN_API_KEY && process.env.MAGICPLAN_CUSTOMER_KEY);
+  checks.magicplan = {
+    status: hasMagicPlan ? "configured" : "unconfigured",
+  };
+
+  // 5. Gemini AI Engine Check
+  checks.gemini = {
+    status: process.env.GEMINI_API_KEY ? "operational" : "unconfigured",
+  };
+
+  // 6. Object Storage (MinIO)
+  checks.storage = {
+    status: process.env.MINIO_ACCESS_KEY ? "operational" : "unconfigured",
+    endpoint: process.env.MINIO_ENDPOINT || "storage.alazab.com",
+  };
+
+  const totalLatencyMs = Date.now() - startTime;
+  const overallStatus = isDegraded ? "degraded" : "healthy";
+
+  res.status(isDegraded ? 503 : 200).json({
+    status: overallStatus,
+    app: "AzProjects Enterprise System",
+    version: "2.5.0",
+    environment: process.env.NODE_ENV || "development",
     productionDomain: "projects.alazab.com",
-    productionUrl: "https://projects.alazab.com",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    totalLatencyMs,
+    checks,
   });
 });
 
@@ -105,15 +163,25 @@ function getDaftraBaseUrl(req: express.Request): string {
 }
 
 function getDaftraApiKey(req: express.Request): string {
-  return (req.headers["x-daftra-apikey"] as string) || (req.headers.apikey as string) || process.env.DAFTRA_API_KEY || "daf_live_alazab_co_998124018274aefb";
+  return (req.headers["x-daftra-apikey"] as string) || (req.headers.apikey as string) || process.env.DAFTRA_API_KEY || "";
 }
 
 // Daftra Test Connection Endpoint
 app.post("/api/daftra/test-connection", async (req, res) => {
   const startTime = Date.now();
   const subdomain = req.body.subdomain || (req.headers["x-daftra-subdomain"] as string) || process.env.DAFTRA_SUBDOMAIN || "alazab-co";
-  const apiKey = req.body.apiKey || (req.headers["x-daftra-apikey"] as string) || (req.headers.apikey as string) || process.env.DAFTRA_API_KEY || "daf_live_alazab_co_998124018274aefb";
+  const apiKey = req.body.apiKey || (req.headers["x-daftra-apikey"] as string) || (req.headers.apikey as string) || process.env.DAFTRA_API_KEY || "";
   const baseUrl = `https://${subdomain}.daftra.com`;
+
+  if (!apiKey) {
+    return res.status(400).json({
+      success: false,
+      mode: "live",
+      source: "daftra",
+      status: "unconfigured",
+      message: "مفتاح API الخاص بدفترة غير متوفر. يرجى ضبط DAFTRA_API_KEY في متغيرات البيئة أو إرساله.",
+    });
+  }
 
   try {
     const upstreamRes = await fetch(`${baseUrl}/api2/site_info`, {
@@ -125,7 +193,8 @@ app.post("/api/daftra/test-connection", async (req, res) => {
       const data = await upstreamRes.json();
       return res.json({
         success: true,
-        isLive: true,
+        mode: "live",
+        source: "daftra",
         status: "connected",
         subdomain,
         baseUrl,
@@ -134,9 +203,10 @@ app.post("/api/daftra/test-connection", async (req, res) => {
         message: `تم الاتصال الفعلي المباشر بنجاح بسيرفر دفترة (${subdomain}.daftra.com) خلال ${latencyMs}ms.`
       });
     } else {
-      return res.json({
+      return res.status(upstreamRes.status).json({
         success: false,
-        isLive: false,
+        mode: "live",
+        source: "daftra",
         status: "auth_failed",
         statusCode: upstreamRes.status,
         subdomain,
@@ -147,21 +217,37 @@ app.post("/api/daftra/test-connection", async (req, res) => {
     }
   } catch (err: any) {
     const latencyMs = Date.now() - startTime;
-    return res.json({
-      success: true,
-      isLive: false,
-      status: "connected_local",
+    if (process.env.NODE_ENV === "development") {
+      return res.json({
+        success: true,
+        mode: "mock",
+        source: "daftra",
+        status: "connected_local",
+        subdomain,
+        baseUrl,
+        latencyMs: Math.max(latencyMs, 45),
+        data: {
+          site_name: "مؤسسة العزب للمقاولات والديكور (Mock)",
+          domain: `${subdomain}.daftra.com`,
+          status: "active",
+          currency: "SAR",
+          live_work_orders: [17]
+        },
+        message: `نمط الاختبار المحلي (Mock) في بيئة التطوير.`
+      });
+    }
+    return res.status(502).json({
+      success: false,
+      mode: "live",
+      source: "daftra",
+      status: "error",
       subdomain,
       baseUrl,
-      latencyMs: Math.max(latencyMs, 45),
-      data: {
-        site_name: "مؤسسة العزب للمقاولات والديكور",
-        domain: `${subdomain}.daftra.com`,
-        status: "active",
-        currency: "SAR",
-        live_work_orders: [17]
-      },
-      message: `تم الاتصال بنجاح عبر قناة الربط المعمارية لمنظومة دفترة (${subdomain}.daftra.com).`
+      latencyMs,
+      error: {
+        code: "DAFTRA_CONNECTION_FAILED",
+        message: err.message || "فشل الاتصال بسيرفر دفترة السحابي."
+      }
     });
   }
 });
@@ -406,16 +492,26 @@ app.post("/api/daftra/journals", async (req, res) => {
 const MAGICPLAN_BASE_URL = "https://cloud.magicplan.app/api/v2";
 
 function getMagicPlanKeys(req: express.Request) {
-  const key = (req.headers["x-magicplan-key"] as string) || (req.headers.key as string) || process.env.MAGICPLAN_API_KEY || "mp_sec_3faed7e9_6e92_495c_b4a6";
-  const customer = (req.headers["x-magicplan-customer"] as string) || (req.headers.customer as string) || process.env.MAGICPLAN_CUSTOMER_KEY || "mp_cust_alazab_contract";
+  const key = (req.headers["x-magicplan-key"] as string) || (req.headers.key as string) || process.env.MAGICPLAN_API_KEY || "";
+  const customer = (req.headers["x-magicplan-customer"] as string) || (req.headers.customer as string) || process.env.MAGICPLAN_CUSTOMER_KEY || "";
   return { key, customer };
 }
 
 // MagicPlan Test Connection Endpoint
 app.post("/api/magicplan/test-connection", async (req, res) => {
   const startTime = Date.now();
-  const key = req.body.apiKey || (req.headers["x-magicplan-key"] as string) || (req.headers.key as string) || process.env.MAGICPLAN_API_KEY || "mp_sec_3faed7e9_6e92_495c_b4a6";
-  const customer = req.body.customerKey || (req.headers["x-magicplan-customer"] as string) || (req.headers.customer as string) || process.env.MAGICPLAN_CUSTOMER_KEY || "mp_cust_alazab_contract";
+  const key = req.body.apiKey || (req.headers["x-magicplan-key"] as string) || (req.headers.key as string) || process.env.MAGICPLAN_API_KEY || "";
+  const customer = req.body.customerKey || (req.headers["x-magicplan-customer"] as string) || (req.headers.customer as string) || process.env.MAGICPLAN_CUSTOMER_KEY || "";
+
+  if (!key || !customer) {
+    return res.status(400).json({
+      success: false,
+      mode: "live",
+      source: "magicplan",
+      status: "unconfigured",
+      message: "مفاتيح ربط MagicPlan (API Key / Customer Key) غير متوفرة. يرجى ضبطها في متغيرات البيئة.",
+    });
+  }
 
   try {
     const upstreamRes = await fetch(`${MAGICPLAN_BASE_URL}/projects`, {
@@ -427,7 +523,8 @@ app.post("/api/magicplan/test-connection", async (req, res) => {
       const data = await upstreamRes.json();
       return res.json({
         success: true,
-        isLive: true,
+        mode: "live",
+        source: "magicplan",
         status: "connected",
         latencyMs,
         projectCount: Array.isArray(data.data) ? data.data.length : 1,
@@ -435,9 +532,10 @@ app.post("/api/magicplan/test-connection", async (req, res) => {
         message: `تم الاتصال الفعلي المباشر بنجاح مع MagicPlan Cloud v2 خلال ${latencyMs}ms.`
       });
     } else {
-      return res.json({
+      return res.status(upstreamRes.status).json({
         success: false,
-        isLive: false,
+        mode: "live",
+        source: "magicplan",
         status: "auth_failed",
         statusCode: upstreamRes.status,
         latencyMs,
@@ -446,17 +544,31 @@ app.post("/api/magicplan/test-connection", async (req, res) => {
     }
   } catch (err: any) {
     const latencyMs = Date.now() - startTime;
-    return res.json({
-      success: true,
-      isLive: false,
-      status: "connected_local",
-      latencyMs: Math.max(latencyMs, 52),
-      data: {
-        team: "مؤسسة العزب للمقاولات والديكور",
-        activeProject: "Arabesque Architectural Villa",
-        planId: "3faed7e9-6e92-495c-b4a6-94a8f0216fcb"
-      },
-      message: `تم التحقق من جاهزية قناة الربط السحابي لمنصة MagicPlan Cloud.`
+    if (process.env.NODE_ENV === "development") {
+      return res.json({
+        success: true,
+        mode: "mock",
+        source: "magicplan",
+        status: "connected_local",
+        latencyMs: Math.max(latencyMs, 52),
+        data: {
+          team: "مؤسسة العزب للمقاولات والديكور (Mock)",
+          activeProject: "Arabesque Architectural Villa",
+          planId: "3faed7e9-6e92-495c-b4a6-94a8f0216fcb"
+        },
+        message: `تم التحقق من جاهزية قناة الربط السحابي لمنصة MagicPlan Cloud في بيئة التطوير (Mock).`
+      });
+    }
+    return res.status(502).json({
+      success: false,
+      mode: "live",
+      source: "magicplan",
+      status: "error",
+      latencyMs,
+      error: {
+        code: "MAGICPLAN_CONNECTION_FAILED",
+        message: err.message || "فشل الاتصال بسيرفر MagicPlan Cloud."
+      }
     });
   }
 });
@@ -1496,15 +1608,15 @@ app.post("/api/azure-agent/test", async (req, res) => {
 // ============================================================================
 
 // 1. Get Projects with strict Row-Level Security (RLS)
-app.get("/api/db/projects", optionalAuth, async (req: AuthRequest, res) => {
+app.get("/api/db/projects", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const userRole = (req.query.role as string) || req.user?.dbRole || "owner";
-    const userEmail = (req.query.email as string) || req.user?.email || "alazab.construction@gmail.com";
+    const userRole = req.user!.role;
+    const userEmail = req.user!.email;
 
     const userProjects = await getProjectsForUser({
       email: userEmail,
       role: userRole,
-      uid: req.user?.uid,
+      uid: req.user!.id,
     });
 
     res.json({
@@ -1521,20 +1633,20 @@ app.get("/api/db/projects", optionalAuth, async (req: AuthRequest, res) => {
 });
 
 // 2. Get Single Project with phases, blueprints, and field updates
-app.get("/api/db/projects/:id", optionalAuth, async (req: AuthRequest, res) => {
+app.get("/api/db/projects/:id", requireAuth, async (req: AuthRequest, res) => {
   try {
     const projectId = parseInt(req.params.id, 10);
-    const userRole = (req.query.role as string) || req.user?.dbRole || "owner";
-    const userEmail = (req.query.email as string) || req.user?.email || "alazab.construction@gmail.com";
+    const userRole = req.user!.role;
+    const userEmail = req.user!.email;
 
     const projectData = await getProjectByIdForUser(projectId, {
       email: userEmail,
       role: userRole,
-      uid: req.user?.uid,
+      uid: req.user!.id,
     });
 
     if (!projectData) {
-      return res.status(404).json({ success: false, error: "Project not found" });
+      return res.status(404).json({ success: false, error: "Project not found or unauthorized" });
     }
 
     res.json({
@@ -1547,13 +1659,13 @@ app.get("/api/db/projects/:id", optionalAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// 3. Trigger manual or automatic sync from Daftra, MagicPlan & Milano
-app.post("/api/db/sync-now", async (req, res) => {
+// 3. Trigger manual or automatic sync from Daftra, MagicPlan & Milano (Admin/Owner only)
+app.post("/api/db/sync-now", requireAuth, requirePermission("integrations.daftra.sync"), async (req: AuthRequest, res) => {
   try {
     await seedInitialProjectsAndClients();
     res.json({
       success: true,
-      message: "تمت مزامنة المشاريع الـ 4 بنجاح واستخراج بريد العملاء وتفعيل سياسات الأمان (RLS) في Cloud SQL.",
+      message: "تمت مزامنة المشاريع بنجاح واستخراج بريد العملاء وتفعيل سياسات الأمان (RLS) في Cloud SQL.",
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -1562,8 +1674,8 @@ app.post("/api/db/sync-now", async (req, res) => {
   }
 });
 
-// 4. List all users and client governance records
-app.get("/api/db/users", async (req, res) => {
+// 4. List all users and client governance records (Owner & Project Manager only)
+app.get("/api/db/users", requireAuth, requireRole(["owner", "project_manager"]), async (req: AuthRequest, res) => {
   try {
     const allUsers = await getAllUsers();
     res.json({
@@ -1577,8 +1689,8 @@ app.get("/api/db/users", async (req, res) => {
   }
 });
 
-// 5. Send or generate direct client invitation link
-app.post("/api/db/invite-client", async (req, res) => {
+// 5. Send or generate direct client invitation link (Owner & Project Manager only)
+app.post("/api/db/invite-client", requireAuth, requireRole(["owner", "project_manager"]), async (req: AuthRequest, res) => {
   try {
     const { email, clientName, phoneNumber, projectCode } = req.body;
     if (!email) {
@@ -1602,16 +1714,19 @@ app.post("/api/db/invite-client", async (req, res) => {
   }
 });
 
-// 6. Record field update in Cloud SQL
-app.post("/api/db/field-updates", async (req, res) => {
+// 6. Record field update in Cloud SQL (Authenticated Team Members)
+app.post("/api/db/field-updates", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { projectId, phaseId, senderName, senderPhone, senderRole, messageType, content, mediaUrl } = req.body;
+    const { projectId, phaseId, senderPhone, messageType, content, mediaUrl } = req.body;
+    const senderName = req.user?.displayName || req.body.senderName || "مهندس الموقع الميداني";
+    const senderRole = req.user?.role || "مهندس الموقع";
+
     const update = await addFieldUpdate({
       projectId: parseInt(projectId, 10),
       phaseId: phaseId ? parseInt(phaseId, 10) : undefined,
-      senderName: senderName || "مهندس الموقع الميداني",
+      senderName,
       senderPhone,
-      senderRole: senderRole || "مهندس الموقع",
+      senderRole,
       messageType: messageType || "text",
       content: content || "تحديث ميداني من الموقع",
       mediaUrl,

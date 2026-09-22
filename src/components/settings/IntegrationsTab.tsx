@@ -54,7 +54,7 @@ export const IntegrationsTab: React.FC = () => {
   } = useApp();
 
   // Daftra State
-  const [daftraApiKey, setDaftraApiKey] = useState(settings.daftraApiKey || 'daf_live_alazab_co_998124018274aefb');
+  const [daftraApiKey, setDaftraApiKey] = useState(settings.daftraApiKey || '');
   const [daftraSubdomain, setDaftraSubdomain] = useState(settings.daftraSubdomain || 'alazab-co');
   const [daftraWorkOrderUrl, setDaftraWorkOrderUrl] = useState(settings.daftraWorkOrderUrl || 'https://alazab-co.daftra.com/owner/work_orders/view/17');
   const [autoSyncDaftra, setAutoSyncDaftra] = useState<boolean>(settings.autoSyncDaftra ?? true);
@@ -64,8 +64,8 @@ export const IntegrationsTab: React.FC = () => {
   const [daftraSyncCosts, setDaftraSyncCosts] = useState<boolean>(true);
 
   // MagicPlan State
-  const [magicplanApiKey, setMagicplanApiKey] = useState(settings.magicplanApiKey || 'mp_sec_3faed7e9_6e92_495c_b4a6');
-  const [magicplanCustomerKey, setMagicplanCustomerKey] = useState(settings.magicplanCustomerKey || 'mp_cust_alazab_contract');
+  const [magicplanApiKey, setMagicplanApiKey] = useState(settings.magicplanApiKey || '');
+  const [magicplanCustomerKey, setMagicplanCustomerKey] = useState(settings.magicplanCustomerKey || '');
   const [magicplanProjectId, setMagicplanProjectId] = useState(settings.magicplanProjectId || '3faed7e9-6e92-495c-b4a6-94a8f0216fcb');
   const [autoSyncMagicPlan, setAutoSyncMagicPlan] = useState<boolean>(settings.autoSyncMagicPlan ?? true);
   const [magicplanSyncInterval, setMagicplanSyncInterval] = useState<number>(settings.magicplanSyncInterval || 30);

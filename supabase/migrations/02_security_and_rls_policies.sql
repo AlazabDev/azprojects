@@ -53,7 +53,7 @@ STABLE
 SET search_path = public, pg_temp
 AS $$
     SELECT role FROM public.profiles 
-    WHERE id::text = (auth.uid())::text 
+    WHERE id::text = (SELECT auth.uid())::text 
     LIMIT 1;
 $$;
 
@@ -67,7 +67,7 @@ SET search_path = public, pg_temp
 AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.profiles 
-        WHERE id::text = (auth.uid())::text 
+        WHERE id::text = (SELECT auth.uid())::text 
         AND role IN ('owner', 'project_manager')
     );
 $$;
@@ -82,7 +82,7 @@ SET search_path = public, pg_temp
 AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.profiles 
-        WHERE id::text = (auth.uid())::text 
+        WHERE id::text = (SELECT auth.uid())::text 
         AND role IN ('owner', 'project_manager', 'architect', 'civil_engineer', 'contractor', 'consultant')
     );
 $$;
@@ -98,7 +98,7 @@ AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.project_team_members 
         WHERE project_id::text = p_project_id::text 
-        AND user_id::text = (auth.uid())::text
+        AND user_id::text = (SELECT auth.uid())::text
         AND is_active = TRUE
     );
 $$;
@@ -114,7 +114,7 @@ AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.projects 
         WHERE id::text = p_project_id::text 
-        AND client_id::text = (auth.uid())::text
+        AND client_id::text = (SELECT auth.uid())::text
     );
 $$;
 
@@ -131,19 +131,19 @@ GRANT EXECUTE ON FUNCTION app_security.is_project_client(VARCHAR) TO authenticat
 DROP POLICY IF EXISTS "profiles_select_policy" ON public.profiles;
 CREATE POLICY "profiles_select_policy" ON public.profiles
 FOR SELECT USING (
-    id::text = (auth.uid())::text OR app_security.is_staff_or_engineer()
+    id::text = (SELECT auth.uid())::text OR app_security.is_staff_or_engineer()
 );
 
 DROP POLICY IF EXISTS "profiles_insert_policy" ON public.profiles;
 CREATE POLICY "profiles_insert_policy" ON public.profiles
 FOR INSERT WITH CHECK (
-    id::text = (auth.uid())::text OR app_security.is_admin_or_owner()
+    id::text = (SELECT auth.uid())::text OR app_security.is_admin_or_owner()
 );
 
 DROP POLICY IF EXISTS "profiles_update_policy" ON public.profiles;
 CREATE POLICY "profiles_update_policy" ON public.profiles
 FOR UPDATE USING (
-    id::text = (auth.uid())::text OR app_security.is_admin_or_owner()
+    id::text = (SELECT auth.uid())::text OR app_security.is_admin_or_owner()
 );
 
 DROP POLICY IF EXISTS "profiles_delete_policy" ON public.profiles;
@@ -159,8 +159,8 @@ DROP POLICY IF EXISTS "projects_select_policy" ON public.projects;
 CREATE POLICY "projects_select_policy" ON public.projects
 FOR SELECT USING (
     app_security.is_admin_or_owner() 
-    OR client_id::text = (auth.uid())::text 
-    OR created_by::text = (auth.uid())::text
+    OR client_id::text = (SELECT auth.uid())::text 
+    OR created_by::text = (SELECT auth.uid())::text
     OR app_security.is_project_member(id)
 );
 
@@ -180,7 +180,7 @@ FOR UPDATE USING (
         AND EXISTS (
             SELECT 1 FROM public.project_team_members 
             WHERE project_id::text = projects.id::text 
-            AND user_id::text = (auth.uid())::text 
+            AND user_id::text = (SELECT auth.uid())::text 
             AND can_edit_project = TRUE
         )
     )
@@ -199,7 +199,7 @@ DROP POLICY IF EXISTS "team_members_select_policy" ON public.project_team_member
 CREATE POLICY "team_members_select_policy" ON public.project_team_members
 FOR SELECT USING (
     app_security.is_admin_or_owner()
-    OR user_id::text = (auth.uid())::text
+    OR user_id::text = (SELECT auth.uid())::text
     OR app_security.is_project_member(project_id)
     OR app_security.is_project_client(project_id)
 );
@@ -266,8 +266,8 @@ DROP POLICY IF EXISTS "tasks_select_policy" ON public.tasks;
 CREATE POLICY "tasks_select_policy" ON public.tasks
 FOR SELECT USING (
     app_security.is_admin_or_owner()
-    OR assigned_to::text = (auth.uid())::text
-    OR created_by::text = (auth.uid())::text
+    OR assigned_to::text = (SELECT auth.uid())::text
+    OR created_by::text = (SELECT auth.uid())::text
     OR (
         app_security.is_project_member(project_id)
         AND app_security.get_current_user_role() IN ('architect', 'civil_engineer', 'consultant')
@@ -283,7 +283,7 @@ FOR INSERT WITH CHECK (
         AND EXISTS (
             SELECT 1 FROM public.project_team_members 
             WHERE project_id::text = tasks.project_id::text 
-            AND user_id::text = (auth.uid())::text 
+            AND user_id::text = (SELECT auth.uid())::text 
             AND can_assign_tasks = TRUE
         )
     )
@@ -294,8 +294,8 @@ DROP POLICY IF EXISTS "tasks_update_policy" ON public.tasks;
 CREATE POLICY "tasks_update_policy" ON public.tasks
 FOR UPDATE USING (
     app_security.is_admin_or_owner()
-    OR assigned_to::text = (auth.uid())::text
-    OR created_by::text = (auth.uid())::text
+    OR assigned_to::text = (SELECT auth.uid())::text
+    OR created_by::text = (SELECT auth.uid())::text
     OR (
         app_security.is_project_member(project_id)
         AND app_security.get_current_user_role() IN ('architect', 'civil_engineer')
@@ -306,7 +306,7 @@ DROP POLICY IF EXISTS "tasks_delete_policy" ON public.tasks;
 CREATE POLICY "tasks_delete_policy" ON public.tasks
 FOR DELETE USING (
     app_security.is_admin_or_owner()
-    OR created_by::text = (auth.uid())::text
+    OR created_by::text = (SELECT auth.uid())::text
 );
 
 -- ----------------------------------------------------------------------------
@@ -316,7 +316,7 @@ DROP POLICY IF EXISTS "documents_select_policy" ON public.documents;
 CREATE POLICY "documents_select_policy" ON public.documents
 FOR SELECT USING (
     app_security.is_admin_or_owner()
-    OR uploaded_by::text = (auth.uid())::text
+    OR uploaded_by::text = (SELECT auth.uid())::text
     OR (app_security.is_project_client(project_id) AND is_public = TRUE)
     OR app_security.is_project_member(project_id)
 );
@@ -325,13 +325,13 @@ DROP POLICY IF EXISTS "documents_insert_policy" ON public.documents;
 CREATE POLICY "documents_insert_policy" ON public.documents
 FOR INSERT WITH CHECK (
     app_security.is_admin_or_owner()
-    OR uploaded_by::text = (auth.uid())::text
+    OR uploaded_by::text = (SELECT auth.uid())::text
     OR (
         app_security.is_project_member(project_id)
         AND EXISTS (
             SELECT 1 FROM public.project_team_members 
             WHERE project_id::text = documents.project_id::text 
-            AND user_id::text = (auth.uid())::text 
+            AND user_id::text = (SELECT auth.uid())::text 
             AND can_upload_blueprints = TRUE
         )
     )
@@ -341,14 +341,14 @@ DROP POLICY IF EXISTS "documents_update_policy" ON public.documents;
 CREATE POLICY "documents_update_policy" ON public.documents
 FOR UPDATE USING (
     app_security.is_admin_or_owner()
-    OR uploaded_by::text = (auth.uid())::text
+    OR uploaded_by::text = (SELECT auth.uid())::text
 );
 
 DROP POLICY IF EXISTS "documents_delete_policy" ON public.documents;
 CREATE POLICY "documents_delete_policy" ON public.documents
 FOR DELETE USING (
     app_security.is_admin_or_owner()
-    OR uploaded_by::text = (auth.uid())::text
+    OR uploaded_by::text = (SELECT auth.uid())::text
 );
 
 -- ----------------------------------------------------------------------------
@@ -373,7 +373,7 @@ FOR INSERT WITH CHECK (
         AND EXISTS (
             SELECT 1 FROM public.project_team_members 
             WHERE project_id::text = cost_items.project_id::text 
-            AND user_id::text = (auth.uid())::text 
+            AND user_id::text = (SELECT auth.uid())::text 
             AND can_manage_budget = TRUE
         )
     )
@@ -388,7 +388,7 @@ FOR UPDATE USING (
         AND EXISTS (
             SELECT 1 FROM public.project_team_members 
             WHERE project_id::text = cost_items.project_id::text 
-            AND user_id::text = (auth.uid())::text 
+            AND user_id::text = (SELECT auth.uid())::text 
             AND can_manage_budget = TRUE
         )
     )
@@ -518,14 +518,14 @@ DROP POLICY IF EXISTS "whatsapp_select_policy" ON public.whatsapp_messages;
 CREATE POLICY "whatsapp_select_policy" ON public.whatsapp_messages
 FOR SELECT USING (
     app_security.is_admin_or_owner()
-    OR assigned_to::text = (auth.uid())::text
+    OR assigned_to::text = (SELECT auth.uid())::text
     OR (project_id IS NOT NULL AND app_security.is_project_member(project_id))
 );
 
 DROP POLICY IF EXISTS "whatsapp_insert_policy" ON public.whatsapp_messages;
 CREATE POLICY "whatsapp_insert_policy" ON public.whatsapp_messages
 FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL 
+    (SELECT auth.uid()) IS NOT NULL 
     OR app_security.is_staff_or_engineer()
     OR current_user = 'service_role'
 );
@@ -534,7 +534,7 @@ DROP POLICY IF EXISTS "whatsapp_update_policy" ON public.whatsapp_messages;
 CREATE POLICY "whatsapp_update_policy" ON public.whatsapp_messages
 FOR UPDATE USING (
     app_security.is_admin_or_owner()
-    OR assigned_to::text = (auth.uid())::text
+    OR assigned_to::text = (SELECT auth.uid())::text
 );
 
 DROP POLICY IF EXISTS "whatsapp_delete_policy" ON public.whatsapp_messages;
@@ -549,13 +549,13 @@ FOR DELETE USING (
 DROP POLICY IF EXISTS "notifications_select_policy" ON public.notifications;
 CREATE POLICY "notifications_select_policy" ON public.notifications
 FOR SELECT USING (
-    user_id::text = (auth.uid())::text OR app_security.is_admin_or_owner()
+    user_id::text = (SELECT auth.uid())::text OR app_security.is_admin_or_owner()
 );
 
 DROP POLICY IF EXISTS "notifications_insert_policy" ON public.notifications;
 CREATE POLICY "notifications_insert_policy" ON public.notifications
 FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL 
+    (SELECT auth.uid()) IS NOT NULL 
     OR app_security.is_admin_or_owner()
     OR current_user = 'service_role'
 );
@@ -563,13 +563,13 @@ FOR INSERT WITH CHECK (
 DROP POLICY IF EXISTS "notifications_update_policy" ON public.notifications;
 CREATE POLICY "notifications_update_policy" ON public.notifications
 FOR UPDATE USING (
-    user_id::text = (auth.uid())::text OR app_security.is_admin_or_owner()
+    user_id::text = (SELECT auth.uid())::text OR app_security.is_admin_or_owner()
 );
 
 DROP POLICY IF EXISTS "notifications_delete_policy" ON public.notifications;
 CREATE POLICY "notifications_delete_policy" ON public.notifications
 FOR DELETE USING (
-    user_id::text = (auth.uid())::text OR app_security.is_admin_or_owner()
+    user_id::text = (SELECT auth.uid())::text OR app_security.is_admin_or_owner()
 );
 
 -- ----------------------------------------------------------------------------
@@ -584,7 +584,7 @@ FOR SELECT USING (
 DROP POLICY IF EXISTS "audit_logs_insert_policy" ON public.audit_logs;
 CREATE POLICY "audit_logs_insert_policy" ON public.audit_logs
 FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL 
+    (SELECT auth.uid()) IS NOT NULL 
     OR current_user = 'service_role'
     OR app_security.is_staff_or_engineer()
 );
@@ -655,6 +655,9 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION app_security.handle_new_user() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA app_security FROM anon;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
