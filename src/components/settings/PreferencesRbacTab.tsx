@@ -16,7 +16,19 @@ import { useApp } from '../../context/AppContext';
 import { UserRole } from '../../types';
 
 export const PreferencesRbacTab: React.FC = () => {
-  const { theme, toggleTheme, activeRole, setActiveRole } = useApp();
+  const { 
+    theme, 
+    toggleTheme, 
+    setTheme,
+    language, 
+    setLanguage, 
+    toggleLanguage, 
+    activeRole, 
+    setActiveRole,
+    t,
+    dir,
+    isRtl
+  } = useApp();
 
   const [currency, setCurrency] = useState('SAR');
   const [currencySymbol, setCurrencySymbol] = useState('ر.س');
@@ -62,26 +74,27 @@ export const PreferencesRbacTab: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSave} className="space-y-6 text-right" dir="rtl">
+    <form onSubmit={handleSave} className="space-y-6 text-right" dir={dir}>
       
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 border border-indigo-800/40 text-white shadow-xs">
+      {/* Header Banner - Brand Royal Navy #030957 */}
+      <div className="bg-[#030957] rounded-2xl p-5 border border-[#030957]/80 text-white shadow-xs">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-[#FFB900] shrink-0">
               <Sliders className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold">التفضيلات ومصفوفة الصلاحيات (Preferences & RBAC Simulator)</h2>
               <p className="text-xs text-slate-300 mt-0.5">
-                تخصيص المظهر والوحدات الهندسية، ومحاكاة تجربة الاستخدام من منظور المالك أو المهندس
+                تخصيص المظهر ثنائي اللغة (العربي الأساسي)، والوضع النهاري/الليلي (النهاري الأساسي)، والوحدات الهندسية
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 flex items-center gap-1.5">
-              <UserCheck className="w-3.5 h-3.5" />
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#FFB900]" />
+              <UserCheck className="w-3.5 h-3.5 text-[#FFB900]" />
               <span>الدور الحالي: {rolesList.find(r => r.id === activeRole)?.nameEn}</span>
             </span>
           </div>
@@ -95,30 +108,85 @@ export const PreferencesRbacTab: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Theme & Localization Options */}
+      {/* 1. Theme, Language & Localization Options */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
         <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Globe className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-          <span>المظهر والوحدات الهندسية (Theme & Engineering Units)</span>
+          <Globe className="w-4 h-4 text-[#030957] dark:text-blue-400" />
+          <span>{t('language')} والمظهر والوحدات الهندسية (Localization, Theme & Units)</span>
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           
-          {/* Theme Toggle */}
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          {/* Language Selector (Arabic Primary) */}
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
             <div>
-              <span className="font-bold text-slate-900 dark:text-white block">مظهر التطبيق</span>
+              <span className="font-bold text-slate-900 dark:text-white block">{t('language')} (Primary Language)</span>
               <span className="text-[11px] text-slate-400">
-                {theme === 'dark' ? 'الوضع الليلي (Dark Mode)' : 'الوضع النهاري (Light Mode)'}
+                {language === 'ar' ? 'العربية (اللغة الافتراضية)' : 'English (Bilingual Mode)'}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-2.5 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:scale-105 transition shadow-2xs border border-slate-200 dark:border-slate-600 cursor-pointer"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-            </button>
+            <div className="flex items-center gap-1.5 mt-2.5">
+              <button
+                type="button"
+                onClick={() => setLanguage('ar')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                  language === 'ar'
+                    ? 'bg-[#030957] text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600'
+                }`}
+              >
+                <span>العربية</span>
+                {language === 'ar' && <span className="w-1.5 h-1.5 rounded-full bg-[#FFB900]" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                  language === 'en'
+                    ? 'bg-[#030957] text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600'
+                }`}
+              >
+                <span>English</span>
+                {language === 'en' && <span className="w-1.5 h-1.5 rounded-full bg-[#FFB900]" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Theme Mode Toggle (Light Primary) */}
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+            <div>
+              <span className="font-bold text-slate-900 dark:text-white block">{t('theme')} (Light Primary)</span>
+              <span className="text-[11px] text-slate-400">
+                {theme === 'dark' ? 'الوضع الليلي (Dark Mode)' : 'الوضع النهاري (الافتراضي)'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-2.5">
+              <button
+                type="button"
+                onClick={() => setTheme('light')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  theme === 'light'
+                    ? 'bg-[#030957] text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600'
+                }`}
+              >
+                <Sun className={`w-3.5 h-3.5 ${theme === 'light' ? 'text-[#FFB900]' : 'text-amber-500'}`} />
+                <span>{t('lightMode')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('dark')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  theme === 'dark'
+                    ? 'bg-[#030957] text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600'
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5 text-slate-400" />
+                <span>{t('darkMode')}</span>
+              </button>
+            </div>
           </div>
 
           {/* Currency */}
@@ -153,6 +221,24 @@ export const PreferencesRbacTab: React.FC = () => {
           </div>
 
         </div>
+
+        {/* Brand Palette Summary Bar */}
+        <div className="p-3 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-800 dark:text-slate-200">ألوان الهوية المعتمدة:</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#030957] text-white text-[11px] font-bold">
+              <span className="w-2 h-2 rounded-full bg-white" />
+              <span>الأساسي #030957 (كحلي ملكي)</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900 dark:bg-slate-800 text-slate-100 text-[11px] font-bold border border-slate-700">
+              <span className="w-2 h-2 rounded-full bg-[#FFB900]" />
+              <span>التمييز #FFB900 (أصفر ذهبي دقيق)</span>
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            اللون الأصفر الذهبي مخصص للمؤشرات الدقيقة والنقاط لتجنب إجهاد العين
+          </span>
+        </div>
       </div>
 
       {/* 2. RBAC Simulation Matrix */}
@@ -174,7 +260,7 @@ export const PreferencesRbacTab: React.FC = () => {
               onClick={() => setActiveRole(role.id)}
               className={`p-4 rounded-2xl border transition cursor-pointer flex flex-col justify-between ${
                 activeRole === role.id
-                  ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-600 dark:border-indigo-500 shadow-xs ring-1 ring-indigo-500'
+                  ? 'bg-slate-50 dark:bg-slate-800/90 border-[#030957] dark:border-blue-500 shadow-xs ring-1.5 ring-[#030957] dark:ring-blue-500'
                   : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
               }`}
             >
@@ -182,8 +268,8 @@ export const PreferencesRbacTab: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900 dark:text-white text-sm">{role.name}</span>
                   {activeRole === role.id && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
-                      <CheckCircle2 className="w-3 h-3" />
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#FFB900]" />
                       <span>نشط الآن</span>
                     </span>
                   )}
@@ -210,10 +296,10 @@ export const PreferencesRbacTab: React.FC = () => {
       <div className="flex items-center justify-end pt-2">
         <button
           type="submit"
-          className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-xs transition cursor-pointer flex items-center gap-2"
+          className="px-6 py-2.5 bg-[#030957] hover:bg-[#07137a] text-white rounded-xl font-bold text-xs shadow-xs transition cursor-pointer flex items-center gap-2 group ring-1 ring-[#030957]/30"
         >
-          <Check className="w-4 h-4" />
-          <span>حفظ التفضيلات</span>
+          <Check className="w-4 h-4 text-[#FFB900] group-hover:scale-110 transition-transform" />
+          <span>حفظ التفضيلات (Save Preferences)</span>
         </button>
       </div>
 

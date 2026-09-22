@@ -25,7 +25,10 @@ import {
   CheckSquare,
   Camera,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Globe,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -57,7 +60,13 @@ export const Header: React.FC<HeaderProps> = ({
     searchQuery,
     setSearchQuery,
     unreadNotificationsCount,
-    markAllNotificationsAsRead
+    markAllNotificationsAsRead,
+    theme,
+    toggleTheme,
+    language,
+    toggleLanguage,
+    t,
+    isRtl
   } = useApp();
 
   const { user: authUser, logout } = useAuthContext();
@@ -210,40 +219,42 @@ export const Header: React.FC<HeaderProps> = ({
         <div 
           onClick={() => setNavigationTab('dashboard')}
           className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group"
-          title="الرئيسية - AzProjects"
+          title={`${t('appName')} - ${t('appSubtitle')}`}
         >
-          {/* Logo Badge: Enterprise indigo/purple gradient with Building icon */}
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 text-white flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+          {/* Logo Badge: Royal Navy (#030957) with Golden Accent (#FFB900) */}
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#030957] text-white flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform relative ring-1 ring-[#030957]/30">
             <Building2 className="w-5 h-5 text-white" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#FFB900] ring-1.5 ring-white dark:ring-slate-900 shadow-2xs" />
           </div>
 
           <div className="flex flex-col text-right">
-            <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-              AzProjects
+            <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight flex items-center gap-1">
+              <span>AzProjects</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FFB900] inline-block" />
             </span>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-none mt-0.5">
-              لوحة التحكم المركزية
+              {t('appSubtitle')}
             </span>
           </div>
         </div>
 
       </div>
 
-      {/* 2. Middle Section: Preserved Modern Search Box (مع بقاء خانة البحث) */}
+      {/* 2. Middle Section: Preserved Modern Search Box */}
       <div ref={searchContainerRef} className="relative flex-1 max-w-sm md:max-w-md lg:max-w-lg mx-2 sm:mx-4">
         <div className="relative flex items-center">
           <Search className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
           
           <input
             type="text"
-            placeholder="بحث في المشاريع، المهام، التكاليف والمستندات..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setShowSearchResults(true);
             }}
             onFocus={() => setShowSearchResults(true)}
-            className="w-full bg-slate-100/80 dark:bg-slate-800/80 text-slate-900 dark:text-white text-xs sm:text-sm rounded-xl pr-9 pl-8 py-2 outline-none border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-2xs"
+            className="w-full bg-slate-100/80 dark:bg-slate-800/80 text-slate-900 dark:text-white text-xs sm:text-sm rounded-xl pr-9 pl-8 py-2 outline-none border border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-[#030957] dark:focus:border-blue-500 focus:ring-1 focus:ring-[#030957] dark:focus:ring-blue-500 transition shadow-2xs"
           />
 
           {searchQuery && (
@@ -373,18 +384,47 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* 3. Left Side (RTL End): Notification Bell, Apps Grid, Sync & User Profile Trigger */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+      {/* 3. Actions: Language Switcher, Theme Mode, Sync, Notifications, Apps, Profile */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
 
-        {/* 3.0 Live Sync Trigger Button with Daftra & MagicPlan */}
+        {/* 3.0 Bilingual Language Switcher (Arabic Primary / English) */}
+        <button
+          onClick={toggleLanguage}
+          className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition text-slate-700 dark:text-slate-200 cursor-pointer shadow-2xs group"
+          title={language === 'ar' ? 'Switch to English (تحويل للإنجليزية)' : 'التبديل إلى العربية (Switch to Arabic)'}
+        >
+          <Globe className="w-3.5 h-3.5 text-[#030957] dark:text-blue-400 group-hover:rotate-12 transition-transform" />
+          <span className="font-bold tracking-wider text-[11px]">
+            {language === 'ar' ? 'EN' : 'عربي'}
+          </span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FFB900] shadow-2xs" />
+        </button>
+
+        {/* 3.1 Theme Mode Switcher (Light Mode is Primary / Dark Mode) */}
+        <button
+          onClick={toggleTheme}
+          className="p-1.5 sm:p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer border border-slate-200/80 dark:border-slate-800"
+          title={theme === 'dark' 
+            ? (language === 'ar' ? 'التبديل إلى الوضع النهاري (Light Mode)' : 'Switch to Light Mode')
+            : (language === 'ar' ? 'التبديل إلى الوضع الليلي (Dark Mode)' : 'Switch to Dark Mode')
+          }
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-4.5 h-4.5 text-[#FFB900]" />
+          ) : (
+            <Moon className="w-4.5 h-4.5 text-[#030957]" />
+          )}
+        </button>
+
+        {/* 3.2 Live Sync Trigger Button with Daftra & MagicPlan */}
         <button
           onClick={() => setShowSyncModal(true)}
           className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-850 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
           title="التزامن الفعلي مع دفترة و MagicPlan"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">مزامنة دفترة & ماجيك بلان</span>
-          <span className="md:hidden inline">مزامنة</span>
+          <span className="hidden xl:inline">مزامنة دفترة & ماجيك بلان</span>
+          <span className="xl:hidden inline">{t('sync')}</span>
         </button>
 
         {/* 3.1 Notifications Bell with Red Badge "50" (matching Image 5 & 4) */}
@@ -554,19 +594,20 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
 
-            {/* Circular Avatar */}
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-white font-bold text-sm sm:text-base flex items-center justify-center shadow-xs ring-2 ring-indigo-100 dark:ring-indigo-900 shrink-0">
+            {/* Circular Avatar: Royal Navy #030957 with subtle gold accent */}
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#030957] text-white font-bold text-sm sm:text-base flex items-center justify-center shadow-xs ring-2 ring-[#FFB900]/40 shrink-0 relative">
               {avatarLetter}
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
             </div>
           </button>
 
           {/* User Profile Dropdown Menu */}
           {showProfileMenu && (
-            <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-100 text-right">
+            <div className={`absolute ${isRtl ? 'left-0' : 'right-0'} mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-3 z-50 animate-in fade-in zoom-in-95 duration-100 ${isRtl ? 'text-right' : 'text-left'}`}>
               
               {/* User Header Profile Card */}
               <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 mb-2">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-white font-bold text-lg flex items-center justify-center shadow-xs shrink-0">
+                <div className="w-12 h-12 rounded-full bg-[#030957] text-white font-bold text-lg flex items-center justify-center shadow-xs shrink-0 ring-2 ring-[#FFB900]/40">
                   {avatarLetter}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -584,7 +625,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               <div className="border-t border-slate-100 dark:border-slate-800 my-1.5" />
 
-              {/* Menu Options matching Image 2 */}
+              {/* Menu Options */}
               <div className="space-y-1">
                 <button
                   onClick={() => {
@@ -594,7 +635,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition cursor-pointer"
                 >
                   <User className="w-4 h-4 text-slate-500 shrink-0" />
-                  <span>الملف الشخصي</span>
+                  <span>{t('myProfile')}</span>
                 </button>
 
                 <button
@@ -605,13 +646,13 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition cursor-pointer"
                 >
                   <Settings className="w-4 h-4 text-slate-500 shrink-0" />
-                  <span>الإعدادات</span>
+                  <span>{t('accountSettings')}</span>
                 </button>
               </div>
 
               <div className="border-t border-slate-100 dark:border-slate-800 my-1.5" />
 
-              {/* Logout Option in Red matching Image 2 */}
+              {/* Logout Option in Red */}
               <button
                 onClick={async () => {
                   setShowProfileMenu(false);
@@ -620,7 +661,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold transition cursor-pointer"
               >
                 <LogOut className="w-4 h-4 text-rose-500 shrink-0" />
-                <span>تسجيل الخروج</span>
+                <span>{t('logout')}</span>
               </button>
 
             </div>

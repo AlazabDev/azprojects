@@ -39,7 +39,14 @@ export const SystemSettings: React.FC = () => {
     settings,
     updateSettings,
     theme, 
-    toggleTheme, 
+    toggleTheme,
+    setTheme,
+    language,
+    setLanguage,
+    toggleLanguage,
+    t,
+    dir,
+    isRtl,
     activeRole, 
     setActiveRole, 
     currentUser, 
@@ -185,36 +192,111 @@ export const SystemSettings: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Theme & Regional Preferences */}
+      {/* 1. Theme, Language & Regional Preferences */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
         <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Globe className="w-4 h-4 text-blue-600" />
-          <span>التفضيلات والمظهر العام (Localization & Theme)</span>
+          <Globe className="w-4 h-4 text-[#030957] dark:text-blue-400" />
+          <span>{t('language')}، {t('theme')} والوحدات الهندسية (Localization & Theme)</span>
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          
+          {/* Language Switcher (Arabic Primary) */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
             <div>
-              <span className="font-bold text-slate-800 dark:text-slate-200 block">الوضع الليلي / النهاري</span>
-              <span className="text-[11px] text-slate-400">التبديل بين الواجهة الداكنة والفاتحة</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('language')} (Primary Language)</span>
+              <span className="text-[11px] text-slate-400">
+                {language === 'ar' ? 'العربية (اللغة الافتراضية)' : 'English (Bilingual Mode)'}
+              </span>
             </div>
-            <button
-              onClick={toggleTheme}
-              className="p-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:scale-105 transition"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-            </button>
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={() => setLanguage('ar')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  language === 'ar'
+                    ? 'bg-[#030957] text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <span>العربية</span>
+                {language === 'ar' && <span className="w-1.5 h-1.5 rounded-full bg-[#FFB900]" />}
+              </button>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  language === 'en'
+                    ? 'bg-[#030957] text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <span>English</span>
+                {language === 'en' && <span className="w-1.5 h-1.5 rounded-full bg-[#FFB900]" />}
+              </button>
+            </div>
           </div>
 
+          {/* Theme Switcher (Light Primary) */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-200 block">{t('theme')} (Light Primary)</span>
+              <span className="text-[11px] text-slate-400">
+                {theme === 'dark' ? 'الوضع الليلي (Dark Mode)' : 'الوضع النهاري (الافتراضي)'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={() => setTheme('light')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  theme === 'light'
+                    ? 'bg-[#030957] text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <Sun className={`w-3.5 h-3.5 ${theme === 'light' ? 'text-[#FFB900]' : 'text-amber-500'}`} />
+                <span>{t('lightMode')}</span>
+              </button>
+              <button
+                onClick={() => setTheme('dark')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                  theme === 'dark'
+                    ? 'bg-[#030957] text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5 text-slate-400" />
+                <span>{t('darkMode')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Currency & Engineering Units */}
           <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div>
               <span className="font-bold text-slate-800 dark:text-slate-200 block">العملة والوحدات الهندسية</span>
               <span className="text-[11px] text-slate-400">الريال السعودي (SAR) • المتر المربع (م²)</span>
             </div>
-            <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold rounded-lg">
+            <span className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-lg text-xs shadow-2xs">
               SAR / م²
             </span>
           </div>
+        </div>
+
+        {/* Brand Palette Banner */}
+        <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200/70 dark:border-slate-700/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-800 dark:text-slate-200">ألوان الهوية المعتمدة:</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#030957] text-white text-[11px] font-bold">
+              <span className="w-2 h-2 rounded-full bg-white" />
+              <span>الأساسي #030957</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900 dark:bg-slate-800 text-slate-100 text-[11px] font-bold border border-slate-700">
+              <span className="w-2 h-2 rounded-full bg-[#FFB900]" />
+              <span>التمييز #FFB900 (ذهبي هادئ)</span>
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            تم ضبط الألوان لحماية العين من الإجهاد البصري
+          </span>
         </div>
       </div>
 

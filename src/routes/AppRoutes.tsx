@@ -35,8 +35,8 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({ onOpenNewProject }) => {
     return (
       <div className="flex items-center justify-center min-h-[400px] w-full">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-slate-500 font-medium">جاري التحقق من الجلسة والصلاحيات...</span>
+          <div className="w-9 h-9 border-3 border-[#030957] border-t-[#FFB900] rounded-full animate-spin" />
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">جاري التحقق من الجلسة والصلاحيات...</span>
         </div>
       </div>
     );

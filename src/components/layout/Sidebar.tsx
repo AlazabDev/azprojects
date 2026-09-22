@@ -62,7 +62,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     whatsAppMessages,
     activeRole,
     syncWithDaftra,
-    syncWithMagicPlan
+    syncWithMagicPlan,
+    t,
+    isRtl,
+    dir
   } = useApp();
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -84,88 +87,88 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const roleLabel = getRoleLabel(displayRole).split(' ')[0] || 'المالك';
   const unlinkedWhatsAppCount = whatsAppMessages?.filter(m => !m.assignedToPhaseId).length || 0;
 
-  // Navigation Items - Each item has an Icon beside the Page Name
+  // Navigation Items - Each item has an Icon beside the Page Name (Bilingual)
   const navItems: NavItem[] = [
     {
       id: 'dashboard',
-      label: 'الرئيسية',
+      label: t('navDashboard'),
       icon: LayoutDashboard
     },
     {
       id: 'projects',
-      label: 'المشاريع المعمارية',
+      label: t('navProjects'),
       icon: Building2,
       badge: projects.length > 0 ? projects.length : undefined
     },
     {
       id: 'engineers-hub',
-      label: 'لوحة تحكم المهندسين',
+      label: t('navEngineersHub'),
       icon: HardHat,
-      badge: 'SBC & دفترة',
+      badge: 'SBC',
       badgeColor: 'bg-indigo-500/20 text-indigo-400 border border-indigo-400/30'
     },
     {
       id: 'client-governance',
-      label: 'حوكمة ومزامنة العملاء (RLS)',
+      label: t('navClientGovernance'),
       icon: ShieldCheck,
-      badge: '4 حية'
+      badge: 'RLS'
     },
     {
       id: 'phases',
-      label: 'المراحل الهندسية',
+      label: t('navPhases'),
       icon: Layers
     },
     {
       id: 'tasks',
-      label: 'المهام ومتابعة التنفيذ',
+      label: t('navTasks'),
       icon: CheckSquare,
-      badge: tasks.filter(t => t.status !== 'done').length || undefined
+      badge: tasks.filter(taskItem => taskItem.status !== 'done').length || undefined
     },
     {
       id: 'magicplan',
-      label: 'مخططات MagicPlan',
+      label: t('navMagicPlan'),
       icon: Compass
     },
     {
       id: 'costs',
-      label: 'التكاليف ودفترة (ZATCA)',
+      label: t('navCosts'),
       icon: DollarSign
     },
     {
       id: 'documents',
-      label: 'المستندات والمخططات',
+      label: t('navDocuments'),
       icon: FileText
     },
     {
       id: 'reports',
-      label: 'وكيل المشروعات (Foundry AI)',
+      label: t('navReportsAi'),
       icon: Bot,
       isAi: true
     },
     {
       id: 'field-communication',
-      label: 'الاتصالات الميدانية (WhatsApp)',
+      label: t('navFieldCommunication'),
       icon: MessageSquare,
       badge: unlinkedWhatsAppCount > 0 ? unlinkedWhatsAppCount : undefined
     },
     {
       id: 'suppliers',
-      label: 'دليل الموردين والمقاولين',
+      label: t('navSuppliers'),
       icon: Users
     },
     {
       id: 'notifications',
-      label: 'المواعيد والتنبيهات',
+      label: t('navNotifications'),
       icon: Calendar
     },
     {
       id: 'integrations',
-      label: 'التكاملات والربط السحابي',
+      label: t('navIntegrations'),
       icon: Sliders
     },
     {
       id: 'settings',
-      label: 'الإعدادات والصلاحيات',
+      label: t('navSettings'),
       icon: Settings
     }
   ];
@@ -185,10 +188,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className={`
           relative z-30
           h-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 flex flex-col shrink-0
-          border-l border-slate-200 dark:border-slate-800 transition-all duration-200 ease-in-out select-none
+          border-e border-slate-200 dark:border-slate-800 transition-all duration-200 ease-in-out select-none
           ${isCollapsed ? 'w-16' : 'w-64'}
         `} 
-        dir="rtl"
+        dir={dir}
       >
         
         {/* Header inside Sidebar */}
@@ -197,8 +200,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Expanded Header */}
           {!isCollapsed ? (
             <div className="flex items-center justify-between w-full">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                القائمة الرئيسية ({roleLabel})
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#FFB900]" />
+                <span>{t('mainMenu')} ({roleLabel})</span>
               </span>
               
               {/* Collapse Button */}
@@ -206,9 +210,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button 
                   onClick={onToggleCollapse}
                   className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                  title="طي القائمة (إظهار الأيقونات فقط)"
+                  title={isRtl ? 'طي القائمة (إظهار الأيقونات فقط)' : 'Collapse Sidebar'}
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  {isRtl ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </button>
               )}
             </div>
@@ -218,10 +222,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {onToggleCollapse && (
                 <button 
                   onClick={onToggleCollapse}
-                  className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                  title="توسيع القائمة (إظهار الأسماء بجوار الأيقونات)"
+                  className="p-2 text-slate-400 hover:text-[#030957] dark:hover:text-blue-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title={isRtl ? 'توسيع القائمة (إظهار الأسماء بجوار الأيقونات)' : 'Expand Sidebar'}
                 >
-                  <ChevronLeft className="w-4.5 h-4.5" />
+                  {isRtl ? <ChevronLeft className="w-4.5 h-4.5" /> : <ChevronRight className="w-4.5 h-4.5" />}
                 </button>
               )}
             </div>
@@ -233,14 +237,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className={`border-b border-slate-200/80 dark:border-slate-800 shrink-0 ${isCollapsed ? 'p-2 space-y-2' : 'p-3 space-y-2.5 bg-slate-50/50 dark:bg-slate-850/40'}`}>
           {!isCollapsed ? (
             <>
-              {/* Prominent New Project Action Button */}
+              {/* Prominent New Project Action Button - Brand Navy #030957 + Golden #FFB900 */}
               {onOpenNewProject && (
                 <button
                   onClick={onOpenNewProject}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#030957] hover:bg-[#07137a] text-white font-bold text-xs shadow-xs transition-all cursor-pointer ring-1 ring-[#030957]/40 group"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>مشروع جديد</span>
+                  <Plus className="w-4 h-4 text-[#FFB900] group-hover:scale-110 transition-transform" />
+                  <span>{t('newProject')}</span>
                 </button>
               )}
 
@@ -250,10 +254,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     onClick={onOpenGallery}
                     className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-semibold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-                    title="معرض المخططات والصور 2D/3D"
+                    title={t('projectGallery')}
                   >
                     <Camera className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <span className="truncate">المعرض</span>
+                    <span className="truncate">{t('projectGallery')}</span>
                   </button>
                 )}
 
@@ -264,20 +268,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   title="مزامنة شاملة مع دفترة و MagicPlan"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span className="truncate">{isSyncing ? 'مزامنة...' : 'مزامنة'}</span>
+                  <span className="truncate">{isSyncing ? t('syncing') : t('sync')}</span>
                 </button>
               </div>
 
               {/* Active Project Switcher */}
               <div className="pt-0.5">
                 <div className="flex items-center justify-between mb-1 px-1">
-                  <span className="text-[10px] font-bold text-slate-400">المشروع النشط</span>
-                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
-                    {selectedProject?.progress || 0}% إنجاز
+                  <span className="text-[10px] font-bold text-slate-400">{t('activeProject')}</span>
+                  <span className="text-[10px] font-bold text-[#030957] dark:text-blue-400 flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-[#FFB900]" />
+                    <span>{selectedProject?.progress || 0}% {t('progress')}</span>
                   </span>
                 </div>
                 <div className="relative flex items-center bg-white dark:bg-slate-800 rounded-xl px-2.5 py-1.5 border border-slate-200 dark:border-slate-700">
-                  <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 ml-1.5" />
+                  <Building2 className="w-3.5 h-3.5 text-[#030957] dark:text-blue-400 shrink-0 ml-1.5" />
                   <select
                     value={selectedProjectId}
                     onChange={(e) => setSelectedProjectId(e.target.value)}
@@ -298,10 +303,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {onOpenNewProject && (
                 <button
                   onClick={onOpenNewProject}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
-                  title="مشروع جديد"
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#030957] hover:bg-[#07137a] text-white shadow-xs transition cursor-pointer"
+                  title={t('newProject')}
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-5 h-5 text-[#FFB900]" />
                 </button>
               )}
 
@@ -309,7 +314,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={onOpenGallery}
                   className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-                  title="المعرض و MagicPlan"
+                  title={t('projectGallery')}
                 >
                   <Camera className="w-4 h-4 text-blue-500" />
                 </button>
@@ -352,14 +357,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     : 'justify-between px-3 py-2.5'
                   }
                   ${isActive 
-                    ? item.isAi
-                      ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200 dark:border-indigo-800/60 shadow-xs'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold' 
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    ? 'bg-[#030957] text-white font-bold shadow-xs ring-1 ring-[#030957]/50' 
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'
                   }
                 `}
               >
-                {/* When Collapsed: Single Centered Icon with Badge Dot securely anchored to Icon */}
+                {/* When Collapsed: Single Centered Icon with Golden Active Indicator */}
                 {isCollapsed ? (
                   <div className="flex items-center justify-center relative w-full h-full">
                     
@@ -368,56 +371,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <Icon className={`
                         w-5 h-5 shrink-0 stroke-[2]
                         ${isActive 
-                          ? item.isAi ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-white' 
+                          ? 'text-white' 
                           : item.isAi ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200'
                         }
                       `} />
 
-                      {/* Clean Badge Dot anchored to the top-left of the icon */}
-                      {item.badge !== undefined && (
-                        <span className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-indigo-600 ring-2 ring-white dark:ring-slate-900" />
-                      )}
+                      {/* Delicate Indicator Dot anchored to icon */}
+                      {isActive ? (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#FFB900] ring-1.5 ring-white dark:ring-slate-900" />
+                      ) : item.badge !== undefined ? (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#030957] ring-2 ring-white dark:ring-slate-900" />
+                      ) : null}
                     </div>
 
-                    {/* Collapsed Tooltip on Hover (Pops out to the left in RTL) */}
-                    <div className="absolute right-full mr-2 hidden group-hover:flex items-center px-2.5 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-100">
+                    {/* Collapsed Tooltip on Hover */}
+                    <div className={`absolute ${isRtl ? 'left-full ml-2' : 'right-full mr-2'} hidden group-hover:flex items-center px-2.5 py-1.5 bg-[#030957] text-white text-xs font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-100`}>
                       <span>{item.label}</span>
                       {item.badge !== undefined && (
-                        <span className="mr-1.5 px-1.5 py-0.2 rounded-full bg-indigo-500 text-white text-[10px] font-bold">
+                        <span className="mr-1.5 px-1.5 py-0.2 rounded-full bg-[#FFB900] text-slate-950 text-[10px] font-black">
                           {item.badge}
                         </span>
                       )}
                     </div>
                   </div>
                 ) : (
-                  /* When Expanded: Icon + Text Beside It */
+                  /* When Expanded: Icon + Text Beside It + Delicate Golden Pip */
                   <>
                     <div className="flex items-center gap-3 min-w-0">
                       <Icon className={`
                         w-5 h-5 shrink-0 stroke-[2]
                         ${isActive 
-                          ? item.isAi ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-white' 
+                          ? 'text-white' 
                           : item.isAi ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200'
                         }
                       `} />
                       
-                      <span className="truncate text-right">
+                      <span className="truncate">
                         {item.label}
                       </span>
 
                       {item.isAi && (
-                        <span className="px-1.5 py-0.2 rounded-md bg-indigo-600 text-white text-[9px] font-bold">
+                        <span className="px-1.5 py-0.2 rounded-md bg-[#FFB900] text-slate-950 text-[9px] font-black">
                           AI
                         </span>
                       )}
                     </div>
 
-                    {/* Numeric Badge */}
-                    {item.badge !== undefined && (
-                      <span className="min-w-5 h-5 px-1.5 rounded-full bg-slate-900 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {/* Right side: Golden active indicator or Numeric Badge */}
+                    {isActive ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FFB900] shrink-0 shadow-2xs" />
+                    ) : item.badge !== undefined ? (
+                      <span className="min-w-5 h-5 px-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0">
                         {item.badge}
                       </span>
-                    )}
+                    ) : null}
                   </>
                 )}
               </button>
@@ -440,7 +447,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
             {!isCollapsed && (
               <span className="truncate">
-                {isSyncing ? 'جاري المزامنة...' : 'مزامنة دفترة & ماجيك بلان'}
+                {isSyncing ? t('syncing') : 'مزامنة دفترة & ماجيك بلان'}
               </span>
             )}
           </button>

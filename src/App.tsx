@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuthContext } from './context/AuthContext';
 import { useResponsive } from './utils/useResponsive';
 import { Sidebar } from './components/layout/Sidebar';
@@ -12,6 +12,7 @@ import { AppRoutes } from './routes/AppRoutes';
 
 const MainAppContent: React.FC = () => {
   const { isAuthenticated } = useAuthContext();
+  const { dir } = useApp();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -23,7 +24,7 @@ const MainAppContent: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden select-none sm:select-auto" dir="rtl">
+    <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden select-none sm:select-auto" dir={dir}>
       
       {/* Real-time Field Connectivity & Offline Sync Banner */}
       <OfflineSyncBanner />

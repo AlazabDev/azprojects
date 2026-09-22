@@ -23,6 +23,16 @@ import {
 } from '../types';
 
 import {
+  Language,
+  Direction,
+  Translations,
+  getInitialLanguage,
+  getInitialTheme,
+  getDirection,
+  translate
+} from '../i18n';
+
+import {
   defaultPeriodicAlertSettings,
   scanDeadlinesAndPhaseUpdates,
   playAlertChime
@@ -154,6 +164,18 @@ interface AppContextType {
   setSearchQuery: (query: string) => void;
   triggerConfetti: () => void;
   resetToDefaultData: () => void;
+  resetToInitialData: () => void;
+
+  // Theme & Bilingual localization
+  theme: 'light' | 'dark' | 'system';
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  toggleTheme: () => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  toggleLanguage: () => void;
+  dir: Direction;
+  isRtl: boolean;
+  t: (key: keyof Translations, fallback?: string) => string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -198,6 +220,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => getStoredItem('teamMembers', initialTeamMembers));
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => getStoredItem('notifications', initialNotifications));
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(() => getStoredItem('auditLogs', initialAuditLogs));
+
+  // Theme & Bilingual Localization State (Defaults: Light mode & Arabic primary)
+  const [theme, setThemeState] = useState<'light' | 'dark' | 'system'>(() => {
+    return getInitialTheme();
+  });
+
+  const [language, setLanguageState] = useState<Language>(() => {
+    return getInitialLanguage();
+  });
+
+  // Apply theme class to document element
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const root = document.documentElement;
+    const isDark = 
+      theme === 'dark' || 
+      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    
+    if (isDark) {
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+    try {
+      localStorage.setItem('azprojects_theme', theme);
+    } catch (e) {
+      // ignore
+    }
+  }, [theme]);
+
+  // Apply language and text direction to document element
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const root = document.documentElement;
+    root.setAttribute('lang', language);
+    root.setAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
+    try {
+      localStorage.setItem('azprojects_lang', language);
+    } catch (e) {
+      // ignore
+    }
+  }, [language]);
+
+  const setTheme = (newTheme: 'light' | 'dark' | 'system') => {
+    setThemeState(newTheme);
+    setSettings(prev => ({ ...prev, theme: newTheme }));
+  };
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+  };
+
+  const setLanguage = (newLang: Language) => {
+    setLanguageState(newLang);
+    setSettings(prev => ({ ...prev, language: newLang }));
+  };
+
+  const toggleLanguage = () => {
+    const nextLang = language === 'ar' ? 'en' : 'ar';
+    setLanguage(nextLang);
+  };
+
+  const dir: Direction = getDirection(language);
+  const isRtl = language === 'ar';
+
+  const t = (key: keyof Translations, fallback?: string): string => {
+    return translate(key, language) || fallback || (key as string);
+  };
 
   const [navigationTab, setNavigationTab] = useState<string>('dashboard');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -1176,6 +1269,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerConfetti();
   };
 
+  const resetToInitialData = () => {
+    resetToDefaultData();
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1260,7 +1357,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         searchQuery,
         setSearchQuery,
         triggerConfetti,
-        resetToDefaultData
+        resetToDefaultData,
+        resetToInitialData,
+        theme,
+        setTheme,
+        toggleTheme,
+        language,
+        setLanguage,
+        toggleLanguage,
+        dir,
+        isRtl,
+        t
       }}
     >
       {children}
