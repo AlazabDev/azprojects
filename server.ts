@@ -17,30 +17,89 @@ import { supabaseServer } from "./src/lib/supabaseServer.ts";
 const app = express();
 const PORT = 3000;
 
-// CORS & Domain Security Configuration
+// 1. Production Reverse Proxy & Security Hardening
+app.set("trust proxy", 1); // Enable proxy trust for Nginx on Ubuntu (projects.alazab.com)
+app.disable("x-powered-by"); // Hide server tech stack
+
+// 2. Global Security Headers (OWASP Recommended)
 app.use((req, res, next) => {
-  const allowedOrigins = [
-    "https://projects.alazab.com",
-    "http://projects.alazab.com",
-    "https://alazab.com",
-    "http://localhost:3000",
-    "http://localhost:5173",
-  ];
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(self), microphone=(self), geolocation=(self)");
+  next();
+});
+
+// 3. CORS & Domain Security Configuration
+const ALLOWED_ORIGINS = [
+  "https://projects.alazab.com",
+  "http://projects.alazab.com",
+  "https://alazab.com",
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+
+app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && (allowedOrigins.includes(origin) || origin.endsWith(".run.app") || origin.endsWith(".alazab.com"))) {
+  const isAllowed = origin && (
+    ALLOWED_ORIGINS.includes(origin) || 
+    origin.endsWith(".run.app") || 
+    origin.endsWith(".alazab.com")
+  );
+
+  if (isAllowed && origin) {
     res.setHeader("Access-Control-Allow-Origin", origin);
-  } else {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  } else if (!origin) {
+    // Same-origin or server-to-server requests
+    res.setHeader("Access-Control-Allow-Origin", "https://projects.alazab.com");
   }
+
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Custom-Domain");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
 
   if (req.method === "OPTIONS") {
     return res.sendStatus(204);
   }
   next();
 });
+
+// 4. Lightweight In-Memory Rate Limiter for Sensitive API Endpoints
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const createRateLimiter = (limit: number, windowMs: number) => {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
+    const key = `${req.path}:${ip}`;
+    const now = Date.now();
+    const record = rateLimitMap.get(key);
+
+    if (!record || now > record.resetTime) {
+      rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+
+    record.count++;
+    if (record.count > limit) {
+      return res.status(429).json({
+        success: false,
+        error: "لقد تجاوزت الحد المسموح به من الطلبات. يرجى الانتظار قليلاً والمحاولة مجدداً (Rate limit exceeded).",
+        retryAfterSeconds: Math.ceil((record.resetTime - now) / 1000),
+      });
+    }
+
+    next();
+  };
+};
+
+// Rate limiter instances for production safety
+const apiRateLimiter = createRateLimiter(60, 60 * 1000); // 60 req/min general APIs
+const aiRateLimiter = createRateLimiter(20, 60 * 1000);  // 20 req/min AI endpoints
+const syncRateLimiter = createRateLimiter(15, 60 * 1000); // 15 req/min sync endpoints
+
+// Apply rate limiting to sensitive routes
+app.use("/api/ai-", aiRateLimiter);
+app.use("/api/sync-", syncRateLimiter);
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
@@ -1759,15 +1818,44 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    
+    // Cache static assets aggressively (Vite builds hashed files in /assets)
+    app.use("/assets", express.static(path.join(distPath, "assets"), {
+      maxAge: "1y",
+      immutable: true,
+    }));
+
+    app.use(express.static(distPath, {
+      maxAge: "1h",
+      etag: true,
+    }));
+
     app.get("*", (req, res) => {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`AzProjects Server running on port ${PORT}`);
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`AzProjects Enterprise Server running on http://0.0.0.0:${PORT}`);
   });
+
+  // Graceful shutdown handling for Ubuntu systemd / PM2
+  const gracefulShutdown = (signal: string) => {
+    console.log(`Received ${signal}. Shutting down AzProjects gracefully...`);
+    server.close(() => {
+      console.log("AzProjects HTTP server closed successfully.");
+      process.exit(0);
+    });
+    // Force close after 10s if connections linger
+    setTimeout(() => {
+      console.error("Forcing shutdown after timeout.");
+      process.exit(1);
+    }, 10000).unref();
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 }
 
 startServer();

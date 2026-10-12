@@ -1,0 +1,45 @@
+# =============================================================================
+# AzProjects Systemd Service Unit
+# Location on Ubuntu: /etc/systemd/system/azprojects.service
+# =============================================================================
+
+[Unit]
+Description=AzProjects Architectural Enterprise Server (Node.js/Express)
+Documentation=https://projects.alazab.com
+After=network.target nginx.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/azprojects
+
+# Environment Configuration
+EnvironmentFile=/var/www/azprojects/.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Start Command using production bundle
+ExecStart=/usr/bin/node /var/www/azprojects/dist/server.cjs
+
+# Restart on crash with backoff
+Restart=always
+RestartSec=5s
+
+# Security Hardening & Sandboxing
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+# Resource Limits
+LimitNOFILE=65535
+LimitNPROC=4096
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=azprojects
+
+[Install]
+WantedBy=multi-user.target

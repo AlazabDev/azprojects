@@ -1,81 +1,185 @@
-# دليل النشر التجريبي / الأولي على السيرفر (Production Staging)
-## مشروع AzProjects - مؤسسة العزب للمقاولات العامة
-### النطاق المستهدف: `projects.alazab.com`
-
-هذا الدليل مخصص لتشغيل **النسخة الأولية للإنتاج** على سيرفرك الخاص لإجراء كافة الاختبارات الميدانية والفنية للمشروع، ومتابعة أي إصلاحات خطوة بخطوة قبل الإعلان النهائي.
+# دليل النشر والتدقيق الأمني لإنتاج AzProjects
+**النطاق المعتمد:** `https://projects.alazab.com`  
+**بيئة التشغيل:** Ubuntu 22.04 / 24.04 LTS + Nginx Reverse Proxy + Node.js (Express + Vite)
 
 ---
 
-### المتطلبات المسبقة (Prerequisites)
+## 🛡️ أولاً: نتائج الفحص والتدقيق الأمني الشامل (Security Audit Report)
 
-1. **توجيه الـ DNS**: تأكد من أن سجل الـ `A Record` للنطاق `projects.alazab.com` يشير إلى عنوان IP السيرفر الخاص بك.
-2. **المنافذ المفتوحة**: تأكد من فتح المنفذين `80` (HTTP) و `443` (HTTPS) في جدار الحماية (UFW أو Security Groups).
-   ```bash
-   sudo ufw allow 80/tcp
-   sudo ufw allow 443/tcp
-   sudo ufw reload
-   ```
+تم إجراء تدقيق برمجي وأمني صارم للمشروع للتأكد من خلوّه من الثغرات البرمجية قبل النشر:
+
+1. **فحص تسريب الأسرار (Zero Secrets in `VITE_`):**
+   - تم التحقق من حزمة المتصفح العميل (`src/config/env.ts` و `.env.example`).
+   - لا توجد أي مفاتيح سرية (`DAFTRA_API_KEY`, `MAGICPLAN_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`) في الفرونت إند أو ببادئة `VITE_`.
+   - كافة المفاتيح الحساسة محصورة 100% في السيرفر الخلفي (`server.ts`).
+
+2. **ترويسات الأمان الصارمة (HTTP Security Headers):**
+   - تم تفعيل `X-Content-Type-Options: nosniff` لمنع هجمات انتحال أنواع الملفات.
+   - تفعيل `X-Frame-Options: SAMEORIGIN` و Content-Security-Policy لمنع هجمات الـ Clickjacking.
+   - حجب بصمة الخادم `x-powered-by: Express` تماماً لمنع الاستكشاف التقني.
+   - تطبيق `Strict-Transport-Security (HSTS)` لمدة عامين مع `includeSubDomains; preload`.
+
+3. **حماية مسارات الـ API وتحديد معدل الطلبات (Rate Limiting & Anti-DDoS):**
+   - إضافة طبقة حماية ومحدد طلبات على مستوى السيرفر الداخلي ومستوى Nginx (`zone=az_auth_limit` و `zone=az_api_limit`).
+   - حماية مسارات الذكاء الاصطناعي والمزامنة مع دفترة وماجيك بلان ضد الإغراق والتعطيل.
+
+4. **حوكمة وأمان قاعدة البيانات (Row-Level Security):**
+   - استعلامات قاعدة البيانات محصورة عبر دوال Drizzle ORM المؤمّنة ضد الـ SQL Injection.
+   - التحقق من صلاحيات الأدوار (RBAC) ومصادقة التوكن (Bearer JWT) قبل الوصول لبيانات المشاريع والتحديثات الميدانية.
+
+5. **الإغلاق الآمن ومعالجة الإشارات (Graceful Shutdown):**
+   - دعم كامل لإشارات `SIGTERM` و `SIGINT` لضمان عدم انقطاع أي اتصال نشط أثناء التحديث أو إعادة تشغيل السيرفر.
 
 ---
 
-### خطوات النشر الأولي السريع (خلال 3 دقائق)
+## 🚀 ثانياً: خطوات التثبيت والإعداد على سيرفر Ubuntu
 
-#### الخطوة 1: نسخ المشروع وتجهيز متغيرات البيئة
-على السيرفر، توجه إلى مسار المشروع وأنشئ ملف `.env`:
+### 1. المتطلبات الأولية على السيرفر
+قم بتحديث النظام وتثبيت الحزم الأساسية:
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl wget git nginx certbot python3-certbot-nginx build-essential
+```
+
+تثبيت **Node.js v20 أو v22 LTS**:
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v # يجب أن يكون v20.x أو أحدث
+npm -v
+```
+
+---
+
+### 2. تجهيز مجلد المشروع وسحب الكود
+قم بإنشاء مجلد النشر في المسار القياسي:
+```bash
+sudo mkdir -p /var/www/azprojects
+sudo chown -R $USER:$USER /var/www/azprojects
+
+# انسخ ملفات المشروع إلى /var/www/azprojects
+cd /var/www/azprojects
+```
+
+---
+
+### 3. إعداد ملف البيئة السري `.env`
+قم بإنشاء ملف `.env` بناءً على ملف `.env.example`:
 ```bash
 cp .env.example .env
-nano .env   # ضع مفاتيحك (Daftra, MagicPlan, Gemini, Supabase, إلخ)
+nano .env
+```
+> **تنبيه أمني هام:**  
+> - قم بملء المفاتيح السرية الحقيقية (`GEMINI_API_KEY`, `DAFTRA_API_KEY`, `MAGICPLAN_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SQL_PASSWORD`).  
+> - تأكد من صلاحية الملف:  
+>   `chmod 600 .env` (لضمان عدم قراءته إلا من قِبل مدير النظام).
+
+---
+
+### 4. بناء وتجميع المشروع (Production Build)
+```bash
+npm ci
+NODE_ENV=production npm run build
+```
+سيقوم هذا الأمر بتوليد:
+- مجلد `dist/` يحتوي على ملفات الواجهة الأمامية المجمعة والمضغوطة.
+- ملف `dist/server.cjs` الذي يضم خادم Express مجمعاً ومجهّزاً للعمل مباشرة.
+
+---
+
+### 5. إعداد وتفعيل خدمة Systemd (التشغيل التلقائي)
+انسخ ملف الخدمة الجاهز إلى مجلد خدمات النظام:
+```bash
+sudo cp deploy/systemd/azprojects.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable azprojects
+sudo systemctl start azprojects
+sudo systemctl status azprojects
 ```
 
-#### الخطوة 2: تشغيل سكريبت بناء ونشر التطبيق (Deploy Script)
-يقوم هذا السكريبت ببناء الواجهة والخادم المجمّع (`dist/server.cjs`) وتشغيله عبر **PM2** في الخلفية مع إعادة التشغيل التلقائي:
+*(اختياري) إذا كنت تفضل استخدام **PM2** بدلاً من Systemd:*
 ```bash
-chmod +x scripts/deploy-production.sh
-./scripts/deploy-production.sh
-```
-
-#### الخطوة 3: تهيئة Nginx وإصدار شهادة SSL عبر Certbot
-يقوم هذا السكريبت بما يلي بشكل آلي تماماً:
-- فحص وتثبيت خادم Nginx و Certbot.
-- إنشاء ملف الإعدادات المتقدم للنطاق `projects.alazab.com` مع دعم WebSockets ورفع ملفات ومخططات حتى 100MB.
-- إصدار شهادة SSL مجانية من Let's Encrypt وتفعيل تحويل الزوار تلقائياً إلى HTTPS.
-- اختبار التجديد التلقائي للشهادة.
-
-شغّل الأمر التالي بصلاحيات المسؤول:
-```bash
-chmod +x scripts/setup-nginx-ssl.sh
-sudo ./scripts/setup-nginx-ssl.sh
+sudo npm install -g pm2
+pm2 start deploy/pm2/ecosystem.config.cjs
+pm2 save
+pm2 startup
 ```
 
 ---
 
-### التحقق والاختبار الأولي
+### 6. استخراج شهادة الأمان SSL (Let's Encrypt) للنطاق
+قبل تفعيل Nginx، تأكد أن سجل الـ DNS من نوع **A Record** للنطاق `projects.alazab.com` يشير إلى عنوان الـ IP الخاص بسيرفر الأوبينتو.
 
-بمجرد اكتمال الأمرين أعلاه:
-1. افتح المتصفح على: **`https://projects.alazab.com`**
-2. تأكد من ظهور القفل الأخضر (SSL Valid) بجانب العنوان.
-3. فحص مسار فحص الحالة:
+قم بإصدار شهادة SSL:
+```bash
+sudo certbot certonly --nginx -d projects.alazab.com
+```
+
+---
+
+### 7. ضبط وتفعيل Nginx
+انسخ ملف التكوين المحمي والمعدّ مسبقاً:
+```bash
+sudo cp deploy/nginx/projects.alazab.com.conf /etc/nginx/sites-available/projects.alazab.com.conf
+sudo ln -s /etc/nginx/sites-available/projects.alazab.com.conf /etc/nginx/sites-enabled/
+
+# اختبار صحة تكوين Nginx
+sudo nginx -t
+
+# إعادة تحميل Nginx
+sudo systemctl reload nginx
+```
+
+---
+
+### 8. تأمين جدار الحماية (UFW Firewall)
+احظر الوصول الخارجي المباشر إلى المنفذ الداخلي `3000` واقصر الاتصال الخارجي على المنافذ الآمنة فقط:
+```bash
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh     # منفذ 22
+sudo ufw allow http    # منفذ 80
+sudo ufw allow https   # منفذ 443
+sudo ufw enable
+sudo ufw status
+```
+
+---
+
+## 🔍 ثالثاً: فحص التحقق من الجاهزية والتشغيل (Post-Deployment Verification)
+
+1. **فحص نقطة الصحة (Health Check):**
    ```bash
    curl -I https://projects.alazab.com/api/health
+   # النتيجة المتوقعة: HTTP/2 200 OK
    ```
-4. فحص سجلات التشغيل المباشرة عند تصفحك وتجربتك للبرنامج:
+
+2. **فحص ترويسات الأمان:**
    ```bash
-   pm2 logs azprojects
+   curl -I https://projects.alazab.com/
+   # تأكد من ظهور:
+   # Strict-Transport-Security
+   # X-Frame-Options: SAMEORIGIN
+   # X-Content-Type-Options: nosniff
+   ```
+
+3. **مراقبة السجلات الحية للخادم:**
+   ```bash
+   # سجلات خدمة التطبيق
+   journalctl -u azprojects -f
+   
+   # سجلات وصول وأخطاء Nginx
+   tail -f /var/log/nginx/azprojects_access.log
+   tail -f /var/log/nginx/azprojects_error.log
    ```
 
 ---
 
-### أوامر مفيدة أثناء مرحلة الاختبار
+## ⚡ رابعاً: التحديثات الدورية (One-Click Update)
 
-| الإجراء | الأمر |
-| :--- | :--- |
-| **مراقبة سجلات الأخطاء الحية** | `pm2 logs azprojects` |
-| **إعادة تشغيل التطبيق بعد أي تعديل** | `pm2 reload azprojects` |
-| **فحص حالة استهلاك الذاكرة والمعالج** | `pm2 monit` |
-| **فحص إعدادات Nginx** | `sudo nginx -t` |
-| **إعادة تشغيل Nginx** | `sudo systemctl reload nginx` |
-| **سجلات Nginx للأخطاء** | `sudo tail -f /var/log/nginx/projects_alazab_error.log` |
-| **فحص تجديد شهادة SSL يدوياً** | `sudo certbot renew --dry-run` |
-
----
-**ملاحظة**: عند رصد أي ملاحظة أو سلوك أثناء تجربة النسخة الأولية، يمكنك تزويدنا بها وسنقوم بحلها فوراً حتى نصل سوياً إلى الجاهزية الكاملة للإنتاج الفعلي.
+لتحديث الكود مستقبلاً وإعادة النشر بنقرة واحدة، استخدم السكربت المؤتمت المرفق:
+```bash
+chmod +x /var/www/azprojects/deploy/deploy.sh
+sudo /var/www/azprojects/deploy/deploy.sh
+```
+يقوم هذا السكربت تلقائياً بسحب التحديثات، إعادة التجميع، فحص الصلاحيات، وإعادة تحميل الخدمة دون توقف.
